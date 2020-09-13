@@ -51,7 +51,9 @@ pub async fn post_job(request: &CreateJobAPIRequest, token: &str) -> std::result
         }
     };
 
-    
+    if res.status() == StatusCode::PAYMENT_REQUIRED {
+        return Err(job_errors::JobErrors::LowFunds)
+    }
 
     let api_response: CreateJobAPIResponse = res.json::<CreateJobAPIResponse>().await?;
 
