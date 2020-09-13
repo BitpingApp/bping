@@ -11,6 +11,8 @@ round-trip min/avg/max/stddev = 10.127/13.020/16.181/2.898 ms
  */
 use std::*;
 
+use colorful::{Colorful, Color};
+
 use crate::{app_config, display::emojis};
 
 
@@ -35,7 +37,14 @@ pub fn display_success_ping(pb: &indicatif::ProgressBar, job: &crate::models::Ge
     if let Some(round_trips) = jobres.data.get("trips") {
       let trips = round_trips.as_array().map_or(vec!(), |x| x.to_vec());
       for (index, rtt) in trips.iter().enumerate() {
-        pb.println(format!("64 bytes from 76.76.21.21: icmp_seq={idx} ttl=120 time={time} ms", idx = index, time = rtt));
+        let mut time_line = "64 bytes".to_string();
+
+        if let Some(ip_address_val) = jobres.data.get("ip_address") {
+          let ip_address = ip_address_val.as_str().map_or("", |x| x);
+          time_line = format!("{} from {ip_address}", time_line, ip_address = ip_address);
+        }
+
+        pb.println(format!("{}: icmp_seq={idx} ttl=120 time={time} ms", time_line, idx = index, time = rtt));
         std::thread::sleep(std::time::Duration::from_millis(500));
       }
     }
@@ -131,6 +140,9 @@ pub fn display_failed_ping(pb: &indicatif::ProgressBar, job: &crate::models::Get
     if let Some(packet_loss) = jobres.data.get("packet_loss") {
       let stat_line_2 = format!("{attempts} packets transmitted, {received} packets received, {packet_loss}% packet loss", attempts = jobres.data["attempts"], received = jobres.data["packets_recv"], packet_loss = packet_loss);
       pb.println(stat_line_2);
+    } else {
+      let error_string = format!("3 packets transmitted, 0 packets recieved, 100% packet loss");
+      pb.println(format!("{}", error_string.color(Color::Red)));
     }
   }
 }
