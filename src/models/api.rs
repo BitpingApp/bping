@@ -136,7 +136,7 @@ pub struct LoginResponse {
     pub name: String,
     pub email: String,
     pub role: String,
-    pub handle: String,
+    pub handle: Option<String>,
     pub usd_balance: String,
     pub created: String,
     pub modified: String,
