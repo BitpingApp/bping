@@ -16,7 +16,7 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
-            artifact_name: bping-linux
+            artifact_name: bping
             asset_name: bping-linux
           - name: windows
             os: windows-latest
@@ -24,7 +24,7 @@ jobs:
             asset_name: bping-windows
           - name: macos
             os: macos-latest
-            artifact_name: bping-macos
+            artifact_name: bping
             asset_name: bping-macos
 
     steps:
