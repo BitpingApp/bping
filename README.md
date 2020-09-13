@@ -1,5 +1,5 @@
 # Bping 1.0
-Bitping Team
+```Bitping Team
 A command line utility to ping a website from anywhere in the world!
 
 USAGE:
@@ -17,4 +17,4 @@ OPTIONS:
 ARGS:
     <endpoint>    Specifies the endpoint (without http://) to ping. eg. bitping.com
 
-Extra configuration can be found at ~/.bitping/.bpingrc
+Extra configuration can be found at ~/.bitping/.bpingrc```
