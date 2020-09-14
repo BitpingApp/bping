@@ -1,4 +1,4 @@
-# Bping
+# bping
 
 <img src="https://imgur.com/3qr5mQW.gif" />
 
