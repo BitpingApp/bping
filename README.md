@@ -1,5 +1,8 @@
-# Bping 1.0
-```Bitping Team
+# Bping
+
+[Imgur](https://imgur.com/3qr5mQW)
+```
+Bitping Team
 A command line utility to ping a website from anywhere in the world!
 
 USAGE:
