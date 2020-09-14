@@ -1,6 +1,7 @@
 # Bping
 
-[Imgur](https://imgur.com/3qr5mQW)
+<img src="https://imgur.com/3qr5mQW.gif" />
+
 ```
 Bitping Team
 A command line utility to ping a website from anywhere in the world!
