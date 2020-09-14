@@ -84,18 +84,29 @@ async fn main() {
     
     let token = authentication::retrieve_user_token().await;
 
-    let spinner_style = ProgressStyle::default_spinner()
+    let mut spinner_style = ProgressStyle::default_spinner()
         .tick_chars("-\\|/")
         .template("{spinner:.green} {msg:.cyan/blue} [{elapsed_precise}] {pos}/{len}");
+    
+    let pb = ProgressBar::new(count);    
+    
 
-    let pb = ProgressBar::new(count);
+    if default_configuration.show_emojis == true {
+        let world_ticker = format!("{}", console::Emoji("🌍🌎🌏🌏🌎🌍", "-\\|/"));
+        spinner_style = spinner_style.tick_chars(&world_ticker);
+        pb.enable_steady_tick(350);
+    } else {
+        pb.enable_steady_tick(100);
+    }
+
+    
     pb.set_style(spinner_style);
 
     let progress_bar_string = display::get_progress_bar_text(endpoint, &parsed_regions);
 
     pb.set_message(&progress_bar_string);
 
-    pb.enable_steady_tick(100);
+    
 
     let request = models::CreateJobAPIRequest {
         job_type: String::from("ping"),
