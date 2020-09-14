@@ -1,3 +1,4 @@
+use colorful::Colorful;
 use std::{pin, marker};
 
 use models::GetJobAPIResponse;
@@ -19,6 +20,8 @@ mod custom_validators;
 
 #[tokio::main]
 async fn main() {
+    let default_configuration = app_config::get_configuration();
+
     fern::Dispatch::new()
         // Add blanket level filter -
         .level(log::LevelFilter::Info)
@@ -62,8 +65,6 @@ async fn main() {
                             .takes_value(true))
                     .get_matches();
 
-    let default_configuration = app_config::get_configuration();
-
     let endpoint = matches.value_of("endpoint").unwrap_or("google.com");
     log::debug!("Value for endpoint: {}", endpoint);
 
@@ -71,8 +72,25 @@ async fn main() {
     if parsed_regions.len() == 0 {
         parsed_regions = default_configuration.default_regions;
     }
+
+    let final_regions = parsed_regions.to_owned();
+    if let Ok(available_nodes) = api::get_available_nodes().await {
+        for region in parsed_regions {
+            if custom_validators::is_continent(&region) {
+                continue;
+            }
+
+            if let Some(country_code) = custom_validators::get_emoji_safe_region_code(&region) {
+                if let None = available_nodes.results.iter().find(|x| x.countrycode == country_code) {
+                    let error_str = format!("No nodes found for given location {}", region);
+                    log::error!("{}", error_str.color(colorful::Color::Red));
+                    return
+                }
+            }
+        }
+    }
     
-    log::debug!("Value for regions: {} {}", parsed_regions.join(","), matches.clone().occurrences_of("regions"));
+    log::debug!("Value for regions: {} {}", final_regions.join(","), matches.clone().occurrences_of("regions"));
 
     let count_str = matches.value_of("count").map_or_else(|| "1", |x| x.trim());
     let count: u64 = count_str.parse::<u64>().map_or_else(|e| {
@@ -102,7 +120,7 @@ async fn main() {
     
     pb.set_style(spinner_style);
 
-    let progress_bar_string = display::get_progress_bar_text(endpoint, &parsed_regions);
+    let progress_bar_string = display::get_progress_bar_text(endpoint, &final_regions);
 
     pb.set_message(&progress_bar_string);
 
@@ -111,7 +129,7 @@ async fn main() {
     let request = models::CreateJobAPIRequest {
         job_type: String::from("ping"),
         endpoint: String::from(endpoint),
-        regions: parsed_regions
+        regions: final_regions
     };
 
     let urls = vec![request; count as usize];

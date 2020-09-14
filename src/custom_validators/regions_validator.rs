@@ -27,6 +27,18 @@ fn get_continent_name(continent_code: &str) -> Option<String> {
   }
 }
 
+pub fn is_continent(region: &str) -> bool {
+  if let Some(_) = get_continent_code(region) {
+    return true
+  }
+
+  if let Some(_) = get_continent_name(region) {
+    return true
+  }
+
+  return false
+}
+
 pub fn validate_region(region: &str) -> Option<String> {
   if let Some(code) = get_continent_code(region) {
     return Some(code)

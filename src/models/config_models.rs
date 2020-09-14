@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-
+use crate::log::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct BpingConfiguration {
