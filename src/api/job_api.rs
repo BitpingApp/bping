@@ -12,7 +12,7 @@ pub async fn get_job_results(job_id: &str, auth_token: &str) -> std::result::Res
     loop {
         let response = Client::new()
             .get(&format!("https://api.bitping.com/job/{}", job_id))
-            .bearer_auth(auth_token.clone())
+            .bearer_auth(auth_token)
             .send()
             .await?;
 

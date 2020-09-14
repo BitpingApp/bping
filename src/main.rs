@@ -1,4 +1,4 @@
-use std::pin;
+use std::{pin, marker};
 
 use models::GetJobAPIResponse;
 use futures::{StreamExt};
@@ -62,14 +62,14 @@ async fn main() {
                             .takes_value(true))
                     .get_matches();
 
-    // let default_configuration = app_config::get_configuration();
+    let default_configuration = app_config::get_configuration();
 
     let endpoint = matches.value_of("endpoint").unwrap_or("google.com");
     log::debug!("Value for endpoint: {}", endpoint);
 
     let mut parsed_regions = parse_regions(matches.clone());
     if parsed_regions.len() == 0 {
-        // parsed_regions = default_configuration.default_regions;
+        parsed_regions = default_configuration.default_regions;
     }
     
     log::debug!("Value for regions: {} {}", parsed_regions.join(","), matches.clone().occurrences_of("regions"));
@@ -90,7 +90,10 @@ async fn main() {
 
     let pb = ProgressBar::new(count);
     pb.set_style(spinner_style);
-    pb.set_message(&format!("Collecting results for {}", endpoint));
+
+    let progress_bar_string = display::get_progress_bar_text(endpoint, &parsed_regions);
+
+    pb.set_message(&progress_bar_string);
 
     pb.enable_steady_tick(100);
 
@@ -105,7 +108,7 @@ async fn main() {
 
     let fetches = futures::stream::iter(
         urls.into_iter().map(|req| {
-            let inner_token = token.clone();
+            let inner_token = token.to_owned();
             async move {
                 let resp = api::post_job(&req, &inner_token).await?;
                 let job_id  = resp.id;
