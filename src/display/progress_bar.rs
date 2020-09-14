@@ -10,7 +10,7 @@ pub fn get_progress_bar_text(endpoint: &str, regions: &Vec<String>) -> String {
         let mut world_message = "Worldwide".to_string();
         if config.show_emojis == true {
           if let Some(emoji) = emojis::get_emoji_for_country_code("WORLD".to_string()) {
-            world_message = format!("{}", console::Emoji(&format!("{} ", emoji), "Worldwide"))
+            world_message = format!("{}", console::Emoji(&format!("{}", emoji), "Worldwide"))
           }
         }
         world_message
