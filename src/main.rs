@@ -1,14 +1,12 @@
 use colorful::Colorful;
-use std::{pin, marker};
+use std::{pin};
 
 use models::GetJobAPIResponse;
 use futures::{StreamExt};
 
-use clap::ArgMatches;
-use clap::{Arg, App};
 use log;
 use indicatif::{ProgressBar, ProgressStyle};
-
+use clap::Clap;
 
 mod models;
 mod authentication;
@@ -16,10 +14,10 @@ mod display;
 mod api;
 mod app_config;
 mod custom_validators;
-
+mod options;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), anyhow::Error> {
     let default_configuration = app_config::get_configuration();
 
     fern::Dispatch::new()
@@ -32,71 +30,20 @@ async fn main() {
         // Apply globally
         .apply().unwrap();
 
-    let matches = App::new("Bping")
-                    .version("1.0")
-                    .author("Bitping Team")
-                    .about("A command line utility to ping a website from anywhere in the world!")
-                    .after_help("Extra configuration can be found at ~/.bitping/.bpingrc")
-                    .arg(Arg::with_name("endpoint")
-                               .value_name("endpoint")
-                               .help("Specifies the endpoint (without http://) to ping. eg. bitping.com")
-                               .required(true)
-                               .index(1)
-                               .takes_value(true))
-                    .arg(Arg::with_name("regions")
-                            .value_name("regions")
-                            .long("regions")
-                            .short("r")
-                            .help("Specifies the ISO 3166 country codes / continent codes to send jobs to. Defaults to Worldwide.")
-                            .value_delimiter(",")
-                            .validator(|x| -> Result<(), String> {
-                                match custom_validators::validate_region(&x) {
-                                    Some(_) => Ok(()),
-                                    None => Err(format!("Given region is invalid: {}", x))
-                                }
-                            })
-                            .takes_value(true))
-                    .arg(Arg::with_name("count")
-                            .value_name("count")
-                            .long("count")
-                            .short("c")
-                            .help("Specifies the number jobs to send. Defaults to 1.")
-                            .default_value("1")
-                            .takes_value(true))
-                    .get_matches();
+    let opts = options::Opts::parse();
 
-    let endpoint = matches.value_of("endpoint").unwrap_or("google.com");
+    let endpoint = opts.endpoint;
     log::debug!("Value for endpoint: {}", endpoint);
 
-    let mut parsed_regions = parse_regions(matches.clone());
+    let mut parsed_regions = opts.regions;
     if parsed_regions.len() == 0 {
         parsed_regions = default_configuration.default_regions;
     }
 
     let final_regions = parsed_regions.to_owned();
-    if let Ok(available_nodes) = api::get_available_nodes().await {
-        for region in parsed_regions {
-            if custom_validators::is_continent(&region) {
-                continue;
-            }
-
-            if let Some(country_code) = custom_validators::get_emoji_safe_region_code(&region) {
-                if let None = available_nodes.results.iter().find(|x| x.countrycode == country_code) {
-                    let error_str = format!("No nodes found for given location {}", region);
-                    log::error!("{}", error_str.color(colorful::Color::Red));
-                    return
-                }
-            }
-        }
-    }
+    check_node_availability(parsed_regions).await?;
     
-    log::debug!("Value for regions: {} {}", final_regions.join(","), matches.clone().occurrences_of("regions"));
-
-    let count_str = matches.value_of("count").map_or_else(|| "1", |x| x.trim());
-    let count: u64 = count_str.parse::<u64>().map_or_else(|e| {
-        log::error!("Error occurred when parsing number: {} ", e);
-        1
-    }, |x| x);
+    let count: u64 = opts.count;
 
     log::debug!("Number of jobs to send is {}", count);
     
@@ -117,18 +64,15 @@ async fn main() {
         pb.enable_steady_tick(100);
     }
 
-    
     pb.set_style(spinner_style);
 
-    let progress_bar_string = display::get_progress_bar_text(endpoint, &final_regions);
+    let progress_bar_string = display::get_progress_bar_text(&endpoint, &final_regions);
 
     pb.set_message(&progress_bar_string);
 
-    
-
     let request = models::CreateJobAPIRequest {
         job_type: String::from("ping"),
-        endpoint: String::from(endpoint),
+        endpoint: endpoint.to_string(),
         regions: final_regions
     };
 
@@ -165,13 +109,31 @@ async fn main() {
     ).await;
 
     pb.finish();
+    Ok(())
 }
 
-fn parse_regions(matches: ArgMatches) -> std::vec::Vec<String> {
-    if let Some(val) = matches.values_of("regions") {
-        let collected = val.collect::<Vec<&str>>();
-        return collected.into_iter().map(|x| x.to_string()).collect()
+async fn perform_job(req: &models::CreateJobAPIRequest, token: &str) -> Result<GetJobAPIResponse, anyhow::Error> {
+    let resp = api::post_job(req, token).await?;
+    let job_id  = resp.id;
+    let res = api::get_job_results(&job_id, token).await?;
+    Ok::<GetJobAPIResponse, anyhow::Error>(res)
+}
+
+async fn check_node_availability(parsed_regions: Vec<String>) -> Result<(), anyhow::Error> {
+    if let Ok(available_nodes) = api::get_available_nodes().await {
+        for region in parsed_regions {
+            if custom_validators::is_continent(&region) {
+                continue;
+            }
+
+            if let Some(country_code) = custom_validators::get_emoji_safe_region_code(&region) {
+                if let None = available_nodes.results.iter().find(|x| x.countrycode == country_code) {
+                    let error_str = format!("No nodes found for given location {}", region);
+                    return Err(anyhow::format_err!("{}", error_str.color(colorful::Color::Red)))
+                }
+            }
+        }
     }
 
-    vec!()
+    Ok(())
 }
