@@ -91,7 +91,15 @@ pub async fn login_with_username_password(username: &String, password: &String) 
           }
       };
 
-  let api_response = match res.json::<models::LoginResponse>().await {
+    let body_text = match res.text().await {
+        Ok(s) => {
+            log::info!("{}", s);
+            s
+        },
+        Err(e) => return Err(authentication_error::AuthenticationError)
+    };
+
+  let api_response = match serde_json::from_str::<models::LoginResponse>(&body_text) {
       Ok(val) => val,
       Err(e) => {
           let err_msg = "Error when parsing login response:\n";
@@ -101,4 +109,5 @@ pub async fn login_with_username_password(username: &String, password: &String) 
   };
 
   Ok(api_response)
+    // Ok(models::LoginResponse::default())
 }

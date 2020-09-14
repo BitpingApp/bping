@@ -15,7 +15,7 @@
           "kind": "bin"
         }
       },
-      "args": ["twetch.app", "-r", "NA,AU,SA", "-c", "5"],
+      "args": ["twetasdasdasdch.app", "-r", "NA,AU,SA", "-c", "5"],
       "cwd": "${workspaceFolder}",
       "env": {
         "RUST_BACKTRACE": "1"

@@ -25,6 +25,12 @@ pub fn display_success_ping(pb: &indicatif::ProgressBar, job: &crate::models::Ge
     // PING bitping.com (76.76.21.21): 56 data bytes
     let mut line_1 = format!("\nPING"); 
 
+    if config.diagnostics.show_ping_type == true {
+      if let Some(ping_type) = jobres.data.get("pingType") {
+        line_1 = format!("{} ({type})", line_1, type = ping_type);
+      }
+    }
+    
     line_1 = format!("{} {endpoint}", line_1, endpoint = job.endpoint);
     if let Some(ip_address_val) = jobres.data.get("ip_address") {
       let ip_address = ip_address_val.as_str().map_or("", |x| x);
@@ -107,13 +113,18 @@ Request timeout for icmp_seq 3
 5 packets transmitted, 0 packets received, 100.0% packet loss
  */
 pub fn display_failed_ping(pb: &indicatif::ProgressBar, job: &crate::models::GetJobAPIResponse) {
+  let config = app_config::get_configuration();
+
   for jobres in &job.job_responses {
     // PING bitping.com (76.76.21.21): 56 data bytes
     let mut line_1 = format!("\nPING"); 
 
-    if let Some(ping_type) = jobres.data.get("pingType") {
-      line_1 = format!("{} ({type})", line_1, type = ping_type);
+    if config.diagnostics.show_ping_type == true {
+      if let Some(ping_type) = jobres.data.get("pingType") {
+        line_1 = format!("{} ({type})", line_1, type = ping_type);
+      }
     }
+    
     line_1 = format!("{} {endpoint}", line_1, endpoint = job.endpoint);
     if let Some(ip_address) = jobres.data.get("ip_address") {
       line_1 = format!("{} ({ip_address})", line_1, ip_address = ip_address);
@@ -132,8 +143,21 @@ pub fn display_failed_ping(pb: &indicatif::ProgressBar, job: &crate::models::Get
     // }
 
     // --- bitping.com ping statistics ---
-    let stat_line_1 = format!("--- {endpoint} ping statistics ---", endpoint = job.endpoint);
-    pb.println(stat_line_1);
+    let mut stat_line_1 = format!("--- {endpoint} ping statistics (", endpoint = job.endpoint);
+    if let Ok(node_info) = serde_json::from_value::<crate::models::NodeInfo>(jobres.data["nodeInfo"].clone()) {
+      stat_line_1 = format!("{}{os} / ", stat_line_1,os = node_info.operating_system)
+    }
+
+    let country_code = jobres.location.country_code.clone();
+    let emoji = emojis::get_emoji_for_country_code(country_code);
+    if config.show_emojis == true && emoji.is_some() == true {
+      stat_line_1 = format!("{}{country_code}, {city}) ---", stat_line_1, country_code = console::Emoji(&format!("{} ", &emoji.unwrap()), &jobres.location.country), city = jobres.location.city);
+      pb.println(stat_line_1);
+    } else {
+      stat_line_1 = format!("{}{country}, {city}) ---", stat_line_1, country = jobres.location.country, city = jobres.location.city);
+      pb.println(stat_line_1);
+    }
+
 
     // If we have packet loss stats, show it here
     // 4 packets transmitted, 4 packets received, 0.0% packet loss
