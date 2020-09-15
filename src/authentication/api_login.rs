@@ -22,7 +22,7 @@ pub async fn retrieve_user_token() -> String {
   // Prompt user for username and password
   let mut token: String = String::from("");
   while token == "" {
-      log::info!("Unable to find your login credentials locally. Please login.");
+      log::warn!("{}", "Unable to find your Bitping login credentials locally, please login to continue. \nIf you dont have an account, sign up at https://app.bitping.com/register.".color(Color::Yellow));
 
       let username = Input::<String>::new()
                               .allow_empty(false)
