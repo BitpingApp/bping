@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use crate::log::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct BpingConfiguration {
@@ -11,8 +10,21 @@ pub struct BpingConfiguration {
   pub diagnostics: BpingDiagnosticsConfig
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BpingDiagnosticsConfig {
   #[serde(default)]
-  pub show_ping_type: bool
+  pub show_ping_type: bool,
+  #[serde(default)]
+  pub log_level: i8
+}
+
+impl BpingDiagnosticsConfig {
+    fn new(show_ping_type: bool, log_level: i8) -> Self { Self { show_ping_type, log_level } }
+}
+
+impl Default for BpingDiagnosticsConfig {
+  fn default() -> Self { 
+    let diag_config = BpingDiagnosticsConfig::new(false, 3);
+    return diag_config;
+  }
 }

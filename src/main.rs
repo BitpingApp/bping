@@ -22,7 +22,14 @@ async fn main() -> Result<(), anyhow::Error> {
 
     fern::Dispatch::new()
         // Add blanket level filter -
-        .level(log::LevelFilter::Info)
+        .level(match default_configuration.diagnostics.log_level {
+            0 => log::LevelFilter::Debug,
+            1 => log::LevelFilter::Trace,
+            2 => log::LevelFilter::Info,
+            3 => log::LevelFilter::Warn,
+            4 => log::LevelFilter::Error,
+            _ => log::LevelFilter::Off
+        })
         // - and per-module overrides
         .level_for("hyper", log::LevelFilter::Info)
         // Output to stdout, files, and other Dispatch configurations

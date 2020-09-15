@@ -69,7 +69,11 @@ fn save_credentials_to_disk(creds: &models::LoginResponse) {
       }
   };
 
-  std::fs::write(file_path.to_str().map_or("", |x| x), &json_str);
+  let file_path_str = file_path.to_str().map_or("", |x| x);
+  match std::fs::write(file_path_str, &json_str) {
+      Ok(_) => log::info!("Successfully wrote credentials to {}", file_path_str),
+      Err(e) => log::error!("Failed to write credentials to {} {}", file_path_str, e)
+  }
 }
 
 pub async fn login_with_username_password(username: &String, password: &String) -> std::result::Result<models::LoginResponse, authentication_error::AuthenticationError> {
@@ -93,7 +97,6 @@ pub async fn login_with_username_password(username: &String, password: &String) 
 
     let body_text = match res.text().await {
         Ok(s) => {
-            log::info!("{}", s);
             s
         },
         Err(e) => return Err(authentication_error::AuthenticationError)
