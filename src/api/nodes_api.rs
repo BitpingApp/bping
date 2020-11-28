@@ -1,4 +1,4 @@
-use reqwest::{Client, StatusCode};
+use reqwest::{Client};
 use crate::models;
 
 pub async fn get_available_nodes() -> std::result::Result<models::AvailableNodes, anyhow::Error> {

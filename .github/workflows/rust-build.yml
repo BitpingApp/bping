@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    tags:
+    branches:
       - "*"
 
 jobs:
@@ -37,15 +37,3 @@ jobs:
 
       - name: Build
         run: cargo build --release
-
-      - name: Strip
-        run: strip target/release/${{ matrix.artifact_name }}
-        if: runner.os != 'Windows'
-
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v1-release
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/${{ matrix.artifact_name }}
-          asset_name: ${{ matrix.asset_name }}
-          tag: ${{ github.ref }}

@@ -27,7 +27,7 @@ pub struct Opts {
     #[clap(
       name = "regions", 
       value_name = "regions",
-      short = "r",
+      short = 'r',
       long = "regions",
       value_delimiter = ",",
       takes_value = true,
@@ -39,7 +39,7 @@ pub struct Opts {
     #[clap(
       name = "count", 
       value_name = "count",
-      short = "c",
+      short = 'c',
       long = "count",
       required = true, 
       takes_value = true,

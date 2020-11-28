@@ -1,6 +1,6 @@
 use thiserror::Error;
 use reqwest::StatusCode;
-use std::io;
+
 
 #[derive(Error, Debug)]
 pub enum JobErrors {
