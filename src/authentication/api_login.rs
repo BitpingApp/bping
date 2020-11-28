@@ -43,7 +43,9 @@ pub async fn retrieve_user_token() -> String {
 
       token = match login_with_username_password(&username, &password).await {
           Ok(val) => {
-              save_credentials_to_disk(&val);
+              if let Err(e) = save_credentials_to_disk(&val) {
+                log::error!("{}", e);
+              };
               val.token
           },
           Err(e) => {
@@ -56,23 +58,29 @@ pub async fn retrieve_user_token() -> String {
   token.to_string()
 }
 
-fn save_credentials_to_disk(creds: &models::LoginResponse) {
+fn save_credentials_to_disk(creds: &models::LoginResponse) -> Result<(), anyhow::Error> {
   let home_dir = dirs::home_dir().unwrap();
 
   // Find bitping config path.
-  let file_path = home_dir.join(".bitping").join("credentials.json");
+  let bitping_folder_path = home_dir.join(".bitping");
   let json_str = match serde_json::to_string(creds) {
       Ok(v) => v,
       Err(e) => {
-          log::error!("Failed to convert login credentials to json. {}", e);
-          return
+          return Err(anyhow::format_err!("{}", format!("Failed to convert login credentials to json. {}", e).color(Color::Red)))
       }
   };
 
-  let file_path_str = file_path.to_str().map_or("", |x| x);
-  match std::fs::write(file_path_str, &json_str) {
-      Ok(_) => log::info!("Successfully wrote credentials to {}", file_path_str),
-      Err(e) => log::error!("Failed to write credentials to {} {}", file_path_str, e)
+  let bitping_folder_str = bitping_folder_path.to_str().map_or("", |x| x);
+  std::fs::create_dir_all(bitping_folder_path.to_owned())?;
+
+  let credentials_path = bitping_folder_path.join("credentials.json");
+
+  match std::fs::write(credentials_path, &json_str) {
+      Ok(_) => {
+          log::info!("Successfully wrote credentials to {}", bitping_folder_str);
+          Ok(())
+      },
+      Err(e) => Err(anyhow::format_err!(format!("Failed to write credentials to {} {}", bitping_folder_str, e).color(Color::Red)))
   }
 }
 
