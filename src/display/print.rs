@@ -1,6 +1,5 @@
 use std::thread::sleep;
-use indicatif::{ProgressBar, ProgressStyle};
-use colored::*;
+use indicatif::{ProgressBar};
 
 use crate::models::GetJobAPIResponse;
 
