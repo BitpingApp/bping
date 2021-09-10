@@ -104,8 +104,6 @@ async fn main() -> Result<(), BpingErrors> {
                 }
             };
 
-            tokio::time::sleep(Duration::from_millis(1000)).await;
-
             let job_id  = resp.id;
             let api_res = match api::get_job_results(&job_id, &inner_token).await {
                 Ok(v) => v,

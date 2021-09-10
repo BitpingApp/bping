@@ -7,8 +7,7 @@ use super::JobErrors;
 pub async fn get_job_results(job_id: &str, auth_token: &str) -> Result<GetJobAPIResponse, JobErrors> {
     let job_response: GetJobAPIResponse;
     loop {
-
-        log::error!("ko {}", job_id);
+        
         let response = Client::new()
             .get(&format!("https://api.bitping.com/job/{}", job_id))
             .bearer_auth(auth_token)
@@ -19,10 +18,14 @@ pub async fn get_job_results(job_id: &str, auth_token: &str) -> Result<GetJobAPI
             let err_msg = match response.text().await {
                 Ok(v) => v,
                 Err(_) => {
-                    return Err(e.into())
+                    continue;
+                    // return Err(e.into())
                 }
             };
-            return Err(JobErrors::CustomHttpError(e, err_msg))
+
+            log::debug!("{} {}", e, err_msg);
+            continue;
+            // return Err(JobErrors::CustomHttpError(e, err_msg))
         }
 
         let parsed_job_response: GetJobAPIResponse = response.json().await?;    
