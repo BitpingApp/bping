@@ -50,12 +50,12 @@ pub fn validate_region(region: &str) -> Option<String> {
 
   // Look up country name by code
   if let Ok(country_info) = Country::from_alpha2(region) {
-    return Some(country_info.long_name)
+    return Some(country_info.long_name.into())
   }
 
   // Lookup country code by name
   if let Ok(country_info) = Country::from_name(region) {
-    return Some(country_info.code)
+    return Some(country_info.code.into())
   }
 
   None

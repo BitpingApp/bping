@@ -1,17 +1,15 @@
-use reqwest::{Client};
-use crate::models;
+use reqwest::{Client, StatusCode};
+use crate::models::{self, AvailableNodes};
+use crate::api::JobErrors;
 
-pub async fn get_available_nodes() -> std::result::Result<models::AvailableNodes, anyhow::Error> {
-  let response = match Client::new()
-          .get("https://api.bitping.com/nodes/countries")
+pub async fn get_available_nodes() -> Result<AvailableNodes, JobErrors> {
+  let response = Client::new().get("https://api.bitping.com/nodes/countries")
           .send()
-          .await {
-            Ok(e) => e,
-            Err(e) => return Err(anyhow::format_err!("Error getting available nodes {}", e))
-          };
+          .await?;
 
-  match response.json::<models::AvailableNodes>().await {
-    Ok(v) => return Ok(v),
-    Err(e) => return Err(anyhow::format_err!("Error parsing available nodes {}", e))
+  if response.status() != StatusCode::OK {
+    return Err(JobErrors::UnableToFindNodes)
   };
+
+  Ok(response.json().await?)
 }

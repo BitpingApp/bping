@@ -29,7 +29,7 @@ pub struct Opts {
       value_name = "regions",
       short = 'r',
       long = "regions",
-      value_delimiter = ",",
+      value_delimiter = ',',
       takes_value = true,
       validator = validate_regions,
       about = "Specifies the ISO 3166 country codes / continent codes to send jobs to. Defaults to Worldwide."
@@ -41,7 +41,6 @@ pub struct Opts {
       value_name = "count",
       short = 'c',
       long = "count",
-      required = true, 
       takes_value = true,
       default_value = "1",
       about = "Specifies the number jobs to send. Defaults to 1."

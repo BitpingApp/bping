@@ -1,13 +1,16 @@
 use colorful::Colorful;
-use std::{pin};
+use std::{pin, thread, time::Duration};
 
 use models::GetJobAPIResponse;
-use futures::{StreamExt};
+use futures::{StreamExt, stream};
 
 use log;
 use indicatif::{ProgressBar, ProgressStyle};
 use clap::Clap;
 
+use crate::errors::BpingErrors;
+
+mod errors;
 mod models;
 mod authentication;
 mod display;
@@ -17,7 +20,7 @@ mod custom_validators;
 mod options;
 
 #[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
+async fn main() -> Result<(), BpingErrors> {
     let default_configuration = app_config::get_configuration();
 
     fern::Dispatch::new()
@@ -54,7 +57,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     log::debug!("Number of jobs to send is {}", count);
     
-    let token = authentication::retrieve_user_token().await;
+    let token = authentication::retrieve_user_token().await?;
 
     let mut spinner_style = ProgressStyle::default_spinner()
         .tick_chars("-\\|/")
@@ -75,7 +78,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let progress_bar_string = display::get_progress_bar_text(&endpoint, &final_regions);
 
-    pb.set_message(&progress_bar_string);
+    pb.set_message(progress_bar_string);
 
     let request = models::CreateJobAPIRequest {
         job_type: String::from("ping"),
@@ -84,49 +87,52 @@ async fn main() -> Result<(), anyhow::Error> {
     };
 
     let urls = vec![request; count as usize];
-    let MAX_CONCURRENCY = 10;
-
-    let fetches = futures::stream::iter(
-        urls.into_iter().map(|req| {
-            let inner_token = token.to_owned();
-            async move {
-                let resp = api::post_job(&req, &inner_token).await?;
-                let job_id  = resp.id;
-                let res = api::get_job_results(&job_id, &inner_token).await?;
-                Ok::<GetJobAPIResponse, anyhow::Error>(res)
-            }
-        }));
+    let fetches = stream::iter(urls.iter());
 
     // Pin the progress bar pointer to ensure it doesnt move in memory when we are using it asynchronously
-    let pb_ptr = pin::Pin::new(&pb);
-    fetches.for_each_concurrent(MAX_CONCURRENCY, |elem|
-        async {
-            match elem.await {
-                Ok(job) => {
-                    let thing = pin::Pin::get_ref(pb_ptr);
-                    display::display_job(thing, &job, &token).await;
-                },
+    // let pb_ptr = pin::Pin::new(&pb);
+    fetches.for_each_concurrent(10, |api_req| {
+        let inner_token = &token;
+        let pb = &pb;
+
+        async move {
+            let resp = match api::post_job(&api_req, &inner_token).await {
+                Ok(v) => v,
                 Err(e) => {
-                    log::error!("Something went wrong when placing a job {}", e)
+                    pb.inc(1);
+                    return log::error!("{}", e)
                 }
-            }
+            };
+
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+
+            let job_id  = resp.id;
+            let api_res = match api::get_job_results(&job_id, &inner_token).await {
+                Ok(v) => v,
+                Err(e) => {
+                    pb.inc(1);
+                    return log::error!("{}", e)
+                }
+            };
+
+            display::display_job(pb, &api_res, &inner_token).await;
             
             pb.inc(1);
         }
-    ).await;
+    }).await;
 
     pb.finish();
     Ok(())
 }
 
-async fn perform_job(req: &models::CreateJobAPIRequest, token: &str) -> Result<GetJobAPIResponse, anyhow::Error> {
+async fn perform_job(req: &models::CreateJobAPIRequest, token: &str) -> Result<GetJobAPIResponse, BpingErrors> {
     let resp = api::post_job(req, token).await?;
     let job_id  = resp.id;
     let res = api::get_job_results(&job_id, token).await?;
-    Ok::<GetJobAPIResponse, anyhow::Error>(res)
+    Ok(res)
 }
 
-async fn check_node_availability(parsed_regions: Vec<String>) -> Result<(), anyhow::Error> {
+async fn check_node_availability(parsed_regions: Vec<String>) -> Result<(), BpingErrors> {
     if let Ok(available_nodes) = api::get_available_nodes().await {
         for region in parsed_regions {
             if custom_validators::is_continent(&region) {
@@ -135,8 +141,7 @@ async fn check_node_availability(parsed_regions: Vec<String>) -> Result<(), anyh
 
             if let Some(country_code) = custom_validators::get_emoji_safe_region_code(&region) {
                 if let None = available_nodes.results.iter().find(|x| x.countrycode == country_code) {
-                    let error_str = format!("No nodes found for given location {}", region);
-                    return Err(anyhow::format_err!("{}", error_str.color(colorful::Color::Red)))
+                    return Err(BpingErrors::JobErrors(crate::api::JobErrors::UnableToFindNodes))
                 }
             }
         }

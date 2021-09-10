@@ -10,6 +10,6 @@ pub enum ConfigErrors {
     CantParseFile(#[from] toml::de::Error),
     #[error("Unable to create .bpingrc {0}")]
     CantCreateFile(io::Error),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error)
+    #[error("{0}")]
+    Other(String)
 }

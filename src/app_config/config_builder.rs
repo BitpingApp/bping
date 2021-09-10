@@ -41,10 +41,10 @@ pub fn get_configuration() -> models::BpingConfiguration {
   return copy_config;
 }
 
-fn read_configuration() -> anyhow::Result<models::BpingConfiguration, ConfigErrors> {
+fn read_configuration() -> Result<models::BpingConfiguration, ConfigErrors> {
   let home_dir = match dirs::home_dir() {
     Some(dir) => dir,
-    None => return Err(ConfigErrors::Other(anyhow::format_err!("Could not read home directory path")))
+    None => return Err(ConfigErrors::Other("Could not read home directory path".into()))
   };
 
   // Find bitping config path.
@@ -75,7 +75,7 @@ fn get_config_file(file_path: &PathBuf) -> Result<String, ConfigErrors> {
   let default_config = models::BpingConfiguration::default();
   let default_settings = match toml::to_string(&default_config) {
     Ok(s) => s,
-    Err(e) => return Err(ConfigErrors::Other(anyhow::format_err!("Cannot create default settings file {}", e)))
+    Err(e) => return Err(ConfigErrors::Other(format!("Cannot create default settings file {}", e)))
   };
 
   let owned_setting_string = default_settings.clone();
@@ -91,7 +91,7 @@ fn get_config_file(file_path: &PathBuf) -> Result<String, ConfigErrors> {
 fn save_config_file(config: &models::BpingConfiguration, file_path: &PathBuf) -> Result<(), ConfigErrors> {
   let serialised = match toml::to_string(config) {
     Ok(serialised) => serialised,
-    Err(e) => return Err(ConfigErrors::Other(anyhow::format_err!("Could not create default configuration string {}", e)))
+    Err(e) => return Err(ConfigErrors::Other(format!("Could not create default configuration string {}", e)))
   };
 
   match std::fs::write(file_path, serialised) {

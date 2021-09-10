@@ -1,20 +1,29 @@
 use std::{thread, time::Duration};
-
 use reqwest::{Client, StatusCode};
-
 use crate::models::{CreateJobAPIRequest, CreateJobAPIResponse, GetJobAPIResponse};
 
-#[path = "./job_errors.rs"]
-mod job_errors;
+use super::JobErrors;
 
-pub async fn get_job_results(job_id: &str, auth_token: &str) -> std::result::Result<GetJobAPIResponse, job_errors::JobErrors> {
+pub async fn get_job_results(job_id: &str, auth_token: &str) -> Result<GetJobAPIResponse, JobErrors> {
     let job_response: GetJobAPIResponse;
     loop {
+
+        log::error!("ko {}", job_id);
         let response = Client::new()
             .get(&format!("https://api.bitping.com/job/{}", job_id))
             .bearer_auth(auth_token)
             .send()
             .await?;
+
+        if let Err(e) = response.error_for_status_ref() {
+            let err_msg = match response.text().await {
+                Ok(v) => v,
+                Err(_) => {
+                    return Err(e.into())
+                }
+            };
+            return Err(JobErrors::CustomHttpError(e, err_msg))
+        }
 
         let parsed_job_response: GetJobAPIResponse = response.json().await?;    
         if parsed_job_response.job_responses.len() > 0 || parsed_job_response.status == "done" {
@@ -28,34 +37,21 @@ pub async fn get_job_results(job_id: &str, auth_token: &str) -> std::result::Res
     Ok(job_response)
 }
 
-pub async fn post_job(request: &CreateJobAPIRequest, token: &str) -> std::result::Result<CreateJobAPIResponse, job_errors::JobErrors> {
-  let json_obj = serde_json::to_value(request)?;
+pub async fn post_job(request: &CreateJobAPIRequest, token: &str) -> Result<CreateJobAPIResponse, JobErrors> {
+    let res = Client::new()
+      .post("https://api.bitping.com/job")
+      .bearer_auth(token)
+      .json(&request)
+      .send()
+      .await?;
 
-  let res = match Client::new()
-    .post("https://api.bitping.com/job")
-    .bearer_auth(token)
-    .json(&json_obj)
-    .send()
-    .await {
-        Ok(value) => value,
-        Err(e) => {
-            if e.is_status() {
-                match e.status() {
-                    Some(StatusCode::PAYMENT_REQUIRED) => return Err(job_errors::JobErrors::LowFunds),
-                    Some(status) => return Err(job_errors::JobErrors::OtherFailedStatus(e, status)),
-                    None => {}
-                }
-            }
-            
-            return Err(job_errors::JobErrors::Other(e));
-        }
-    };
-
-    if res.status() == StatusCode::PAYMENT_REQUIRED {
-        return Err(job_errors::JobErrors::LowFunds)
-    }
-
-    let api_response: CreateJobAPIResponse = res.json::<CreateJobAPIResponse>().await?;
-
-    Ok(api_response)
+      match res.status() {
+        StatusCode::OK => (),
+        StatusCode::PAYMENT_REQUIRED => return Err(JobErrors::LowFunds),
+        status => return Err(JobErrors::OtherFailedStatus(status))
+      }
+  
+      let api_response: CreateJobAPIResponse = res.json().await?;
+  
+      Ok(api_response)
 }
