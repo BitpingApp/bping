@@ -1,5 +1,3 @@
-use colorful::{Color, Colorful};
-
 use crate::{
     models::types::{
         PerformIcmpResponseNodeInfo, PerformIcmpResponseResultsItem,
@@ -7,19 +5,17 @@ use crate::{
     },
     options::Opts,
 };
+use colorful::{Color, Colorful};
 use std::*;
 
-/*
- * PING bitping.com (76.76.21.21): 56 data bytes
-64 bytes from 76.76.21.21: icmp_seq=0 ttl=120 time=16.181 ms
-64 bytes from 76.76.21.21: icmp_seq=1 ttl=120 time=10.129 ms
-64 bytes from 76.76.21.21: icmp_seq=2 ttl=120 time=15.644 ms
-^C
---- bitping.com ping statistics ---
-4 packets transmitted, 4 packets received, 0.0% packet loss
-round-trip min/avg/max/stddev = 10.127/13.020/16.181/2.898 ms
- *
- */
+fn print_border(pb: &indicatif::ProgressBar, width: usize) {
+    pb.println("┌".to_string() + &"─".repeat(width - 2) + "┐");
+}
+
+fn print_footer(pb: &indicatif::ProgressBar, width: usize) {
+    pb.println("└".to_string() + &"─".repeat(width - 2) + "┘");
+}
+
 pub fn display_success_ping(
     pb: &indicatif::ProgressBar,
     config: &Opts,
@@ -27,6 +23,8 @@ pub fn display_success_ping(
     jobres: &PerformIcmpResponseResultsItemResult,
     node_info: &PerformIcmpResponseNodeInfo,
 ) {
+    let width = 80; // Adjust this value as needed
+    print_border(pb, width);
     format_ping_header(pb, config, endpoint, &jobres.ip_address, node_info);
 
     // Display individual ping results
@@ -34,20 +32,20 @@ pub fn display_success_ping(
     for i in 0..trips {
         let time = jobres.min + (jobres.max - jobres.min) * (i as f64 / (trips - 1) as f64);
         pb.println(format!(
-            "64 bytes from {}: icmp_seq={} ttl=120 time={:.2} ms",
+            "│ 64 bytes from {}: icmp_seq={} ttl=120 time={:.2} ms",
             jobres.ip_address, i, time
         ));
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
-    pb.println(""); // Empty line for spacing
+    pb.println("│"); // Empty line for spacing
 
     // Construct and print statistics line
-    pb.println(format!("--- {endpoint} ping statistics ---"));
+    pb.println(format!("│ --- {endpoint} ping statistics ---"));
 
     // Print packet loss information
     pb.println(format!(
-        "{} packets transmitted, {} packets received, {:.1}% packet loss",
+        "│ {} packets transmitted, {} packets received, {:.1}% packet loss",
         jobres.packets_sent,
         jobres.packets_recv,
         jobres.packet_loss * 100.0
@@ -55,27 +53,21 @@ pub fn display_success_ping(
 
     // Print round-trip statistics
     pb.println(format!(
-        "round-trip min/avg/max/stddev = {:.3}/{:.3}/{:.3}/{:.3} ms",
+        "│ round-trip min/avg/max/stddev = {:.3}/{:.3}/{:.3}/{:.3} ms",
         jobres.min, jobres.avg, jobres.max, jobres.std_dev
     ));
+
+    print_footer(pb, width);
 }
 
-/*
- * PING asdasdasd.com (199.59.242.153): 56 data bytes
-Request timeout for icmp_seq 0
-Request timeout for icmp_seq 1
-Request timeout for icmp_seq 2
-Request timeout for icmp_seq 3
-^C
---- asdasdasd.com ping statistics ---
-5 packets transmitted, 0 packets received, 100.0% packet loss
- */
 pub fn display_failed_ping(
     pb: &indicatif::ProgressBar,
     config: &Opts,
     jobres: &PerformIcmpResponseResultsItem,
     node_info: &PerformIcmpResponseNodeInfo,
 ) {
+    let width = 80; // Adjust this value as needed
+    print_border(pb, width);
     let ip_address = jobres
         .result
         .as_ref()
@@ -85,28 +77,30 @@ pub fn display_failed_ping(
     // Request timeout for icmp_seq 0, 1, 2, 3
     let attempts = jobres.result.as_ref().map_or(4, |r| r.attempts as usize);
     for index in 0..attempts {
-        pb.println(format!("Request timeout for icmp_seq {}", index));
+        pb.println(format!("│ Request timeout for icmp_seq {}", index));
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
     // --- asdasdasd.com ping statistics ---
-    pb.println(format!("--- {} ping statistics ---", jobres.endpoint));
+    pb.println(format!("│ --- {} ping statistics ---", jobres.endpoint));
 
     // 5 packets transmitted, 0 packets received, 100.0% packet loss
     let error_string = if let Some(result) = &jobres.result {
         format!(
-            "{} packets transmitted, {} packets received, {:.1}% packet loss",
+            "│ {} packets transmitted, {} packets received, {:.1}% packet loss",
             result.packets_sent,
             result.packets_recv,
             result.packet_loss * 100.0
         )
     } else {
         format!(
-            "{} packets transmitted, 0 packets received, 100% packet loss",
+            "│ {} packets transmitted, 0 packets received, 100% packet loss",
             attempts
         )
     };
     pb.println(format!("{}", error_string.color(Color::Red)));
+
+    print_footer(pb, width);
 }
 
 pub fn format_ping_header(
@@ -117,7 +111,7 @@ pub fn format_ping_header(
     node_info: &PerformIcmpResponseNodeInfo,
 ) {
     // PING line
-    let ping_line = format!("PING {} ({}): 56 data bytes", endpoint, ip_address);
+    let ping_line = format!("│ PING {} ({}): 56 data bytes", endpoint, ip_address);
     pb.println(ping_line);
 
     // Origin line
@@ -138,7 +132,7 @@ pub fn format_ping_header(
     };
 
     let origin_line = format!(
-        "├── Origin: {} {}, {} {}",
+        "│ ├── Origin: {} {}, {} {}",
         country_emoji.unwrap_or(""),
         node_info.region_name.as_deref().unwrap_or("Unknown"),
         country_name,
@@ -147,16 +141,19 @@ pub fn format_ping_header(
     pb.println(origin_line);
 
     // ISP line
-    let isp_line = format!("├── ISP: {}", node_info.isp.as_deref().unwrap_or("Unknown"));
+    let isp_line = format!(
+        "│ ├── ISP: {}",
+        node_info.isp.as_deref().unwrap_or("Unknown")
+    );
     pb.println(isp_line);
 
     // System line
     let system_line = format!(
-        "└── System: {}",
+        "│ └── System: {}",
         node_info.operating_system.as_deref().unwrap_or("Unknown")
     );
     pb.println(system_line);
 
     // Separator line
-    pb.println("---");
+    pb.println("│ ---");
 }
