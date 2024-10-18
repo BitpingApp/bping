@@ -1,53 +1,32 @@
-use std::thread::sleep;
-use indicatif::{ProgressBar};
+use indicatif::ProgressBar;
+use tracing::error;
 
-use crate::models::GetJobAPIResponse;
+use crate::{models::types::PerformIcmpResponse, options::Opts};
 
-#[path = "../api/mod.rs"]
-mod api;
-// #[path = "../models/mod.rs"]
-// mod models;
+use super::ping_display;
 
-#[path = "./ping_display.rs"]
-mod ping_display;
+pub async fn display_job(pb: &ProgressBar, config: &Opts, job_data: &PerformIcmpResponse) {
+    for result in &job_data.results {
+        if let Some(err) = &result.error {
+            error!(?err, "Fatal job error.");
+            continue;
+        }
 
-pub async fn display_job(pb: &ProgressBar, job_data: &GetJobAPIResponse, token: &str) {  // Job is failed, keep going until done and we have printed everything
-  let mut is_done = false;
-  let mut index = 0;
-  
-  let mut results = job_data.clone();
-  while !is_done {
-      let parsed_time = match results.job_responses[index].response_time.parse::<f32>() {
-          Ok(v) => v,
-          Err(e) => {
-              pb.println(format!("Failed to parse response time {}", e));
-              -1.0
-          }
-      };
+        if let Some(job_result) = &result.result {
+            if job_result.packet_loss == 1.0 {
+                ping_display::display_failed_ping(pb, config, result, &job_data.node_info);
+                continue;
+            }
 
-      if parsed_time <= -1.0 {
-          ping_display::display_failed_ping(pb, &results)
-      }
-      else {
-          ping_display::display_success_ping(pb, &results);
-      }
+            ping_display::display_success_ping(
+                pb,
+                config,
+                &result.endpoint,
+                job_result,
+                &job_data.node_info,
+            );
+        }
 
-      while results.status != "done" && results.job_responses.len() <= index + 1 {
-          let new_job_id = &results.id;
-          results = match api::get_job_results(new_job_id, token).await {
-              Ok(val) => val,
-              Err(e) => {
-                  pb.println(format!("Error getting job results {}, trying again", e));
-                  return
-              }
-          }.clone();
-          sleep(std::time::Duration::from_millis(350));
-      }
-
-      index = index +1;
-
-      if results.status == "done" {
-          is_done = true
-      }
-  }
+        pb.println("");
+    }
 }

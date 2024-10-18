@@ -1,30 +1,38 @@
 [package]
 name = "bping"
-version = "1.1.0"
+version = "2.0.0"
 authors = ["Firaenix <Nick.Carton@gmail.com>"]
-edition = "2018"
+edition = "2021"
+resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.11.4", features = ["json"] }
-clap = { version = "3.0.0-beta.4", features = ["derive"] }
-spinners = "2.0.0"
-log = "0.4.8"
-fern = "0.6.0"
-toml = "0.5.6"
-colored = "2.0"
-tokio = { version = "1.11.0", features = ["full"] }
-dirs = "3.0.1"
+reqwest = { version = "0.12.5", features = ["json"] }
+spinners = "4.1.1"
+tokio = { version = "1.38.0", features = ["full"] }
+dirs = "5.0.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-futures = { version = "0.3.5", features = ["thread-pool"] }
-dialoguer = "0.8.0"
-colorful = "0.2.1"
-indicatif = "0.16.2"
+futures = { version = "0.3.30", features = ["thread-pool"] }
+dialoguer = "0.11.0"
+colorful = "0.3.2"
+indicatif = "0.17.8"
 chrono = { version = "0.4", features = ["serde"] }
-celes = "2.1.0"
-thiserror = "1.0.20"
-async-stream = "0.3.0"
-validator = { version = "0.14.0", feature = ["derive"] }
-console = "0.14.1"
+celes = "2.4.0"
+thiserror = "1.0.61"
+async-stream = "0.3.5"
+console = "0.15.8"
+keshvar = { version = "0.5.0", features = ["serde", "emojis"] }
+color-eyre = "0.6.3"
+toml = "0.8"
+progenitor = "0.8.0"
+bpaf = { version = "0.9.15", features = [
+  "color",
+  "docgen",
+  "autocomplete",
+  "batteries",
+] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+rand = "0.8.5"
