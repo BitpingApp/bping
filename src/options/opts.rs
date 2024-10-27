@@ -63,7 +63,7 @@ impl Opts {
 #[derive(Clone, Debug)]
 pub enum EarthRegion {
     Continent(keshvar::Continent),
-    Country(keshvar::Country),
+    Country(keshvar::Alpha3),
     Anywhere,
 }
 
@@ -71,7 +71,7 @@ impl std::fmt::Display for EarthRegion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             EarthRegion::Continent(continent) => write!(f, "{}", continent.to_string()),
-            EarthRegion::Country(country) => write!(f, "{}", country.alpha3().to_string()),
+            EarthRegion::Country(country) => write!(f, "{}", country.to_string()),
             EarthRegion::Anywhere => write!(f, ""),
         }
     }
@@ -88,12 +88,17 @@ pub fn parse_alpha_codes(regions: &str) -> eyre::Result<Vec<EarthRegion>> {
 
     for region_part in parts {
         if let Ok(alpha2) = keshvar::Alpha2::try_from(region_part) {
-            regions.push(EarthRegion::Country(alpha2.to_country()));
+            regions.push(EarthRegion::Country(alpha2.to_country().alpha3()));
             continue;
         }
 
         if let Ok(alpha3) = keshvar::Alpha3::try_from(region_part) {
-            regions.push(EarthRegion::Country(alpha3.to_country()));
+            regions.push(EarthRegion::Country(alpha3.to_country().alpha3()));
+            continue;
+        }
+
+        if let Ok(country) = keshvar::Country::try_from(region_part) {
+            regions.push(EarthRegion::Country(country.alpha3()));
             continue;
         }
 
@@ -102,24 +107,30 @@ pub fn parse_alpha_codes(regions: &str) -> eyre::Result<Vec<EarthRegion>> {
             continue;
         }
 
-        match region_part.to_lowercase().as_str() {
-            "north america" => {
-                regions.push(EarthRegion::Continent(Continent::NorthAmerica));
-                continue;
-            }
-            "south america" => {
-                regions.push(EarthRegion::Continent(Continent::SouthAmerica));
-                continue;
-            }
-            "america" => {
-                println!("Assuming North and South America.");
-                regions.extend_from_slice(&[
+        if let Ok(region) = keshvar::Region::try_from(region_part) {
+            let continents = match region {
+                keshvar::Region::Africa => vec![EarthRegion::Continent(keshvar::Continent::Africa)],
+                keshvar::Region::Americas => vec![
                     EarthRegion::Continent(Continent::NorthAmerica),
                     EarthRegion::Continent(Continent::SouthAmerica),
-                ]);
-                continue;
-            }
-            _ => {}
+                ],
+                keshvar::Region::Antarctica => vec![EarthRegion::Continent(Continent::Antarctica)],
+                keshvar::Region::Asia => vec![EarthRegion::Continent(Continent::Asia)],
+                keshvar::Region::Europe => vec![EarthRegion::Continent(Continent::Europe)],
+                keshvar::Region::Oceania => vec![EarthRegion::Continent(Continent::Australia)],
+            };
+            regions.extend_from_slice(&continents);
+
+            continue;
+        }
+
+        if let "america" = region_part.to_lowercase().as_str() {
+            println!("Assuming North and South America.");
+            regions.extend_from_slice(&[
+                EarthRegion::Continent(Continent::NorthAmerica),
+                EarthRegion::Continent(Continent::SouthAmerica),
+            ]);
+            continue;
         }
 
         tracing::warn!("Unable to identify region '{region_part}'. Skipping.");

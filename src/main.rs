@@ -64,7 +64,7 @@ async fn main() -> eyre::Result<()> {
 
     let pb = ProgressBar::new((APP_CONFIG.attempts * APP_CONFIG.regions.len()) as u64);
 
-    let world_ticker = format!("{}", console::Emoji("🌍🌎🌏🌏🌎🌍", "-\\|/"));
+    let world_ticker = format!("{}", console::Emoji("🌍🌍🌎🌎🌏🌏🌎🌎🌍🌍", "-\\|/"));
     spinner_style = spinner_style.tick_chars(&world_ticker);
     pb.enable_steady_tick(Duration::from_millis(350));
 
@@ -76,26 +76,26 @@ async fn main() -> eyre::Result<()> {
         for _ in 0..APP_CONFIG.attempts {
             let pb = pb.clone();
             set.spawn(async move {
-                let country_code = match region {
-                    options::EarthRegion::Country(c) => Some(c.alpha2().to_string()),
-                    options::EarthRegion::Continent(con) => {
-                        debug!(
-                            ?con,
-                            "Selecting a random country within the provided continent"
-                        );
-
-                        let countries: Vec<_> = con
-                            .alpha2_list()
-                            .iter()
-                            .map(|alpha2_str| Alpha2::try_from(*alpha2_str).unwrap())
-                            .collect();
-
-                        let random_country = countries
-                            .choose(&mut rand::thread_rng())
-                            .context("Couldnt select any country in the given continent")?;
-                        Some(random_country.to_string())
+                let (country_code, continent_code) = match region {
+                    options::EarthRegion::Country(c) => {
+                        (Some(c.to_country().alpha2().to_string()), None)
                     }
-                    _ => None,
+                    options::EarthRegion::Continent(con) => (
+                        None,
+                        Some(
+                            match con {
+                                keshvar::Continent::Africa => "AF",
+                                keshvar::Continent::Antarctica => "AN",
+                                keshvar::Continent::Asia => "AS",
+                                keshvar::Continent::Australia => "OC",
+                                keshvar::Continent::Europe => "EU",
+                                keshvar::Continent::NorthAmerica => "NA",
+                                keshvar::Continent::SouthAmerica => "SA",
+                            }
+                            .to_string(),
+                        ),
+                    ),
+                    _ => (None, None),
                 };
 
                 debug!(?country_code, "Sending job to country");
@@ -108,6 +108,7 @@ async fn main() -> eyre::Result<()> {
                             attempts: Some(APP_CONFIG.count as f64),
                         }),
                         country_code,
+                        continent_code,
                         hostnames: vec![endpoint.to_string()],
                         isp_regex: None,
                     })
