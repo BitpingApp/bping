@@ -1,8 +1,8 @@
 # bping
 
-<img src="https://imgur.com/3qr5mQW.gif" />
+![Bping demo](./bping-demo.gif)
 
-```
+````
 A command line utility to ping a website from anywhere in the world!
 
 Usage: bping [-r=<regions>] [-c=<count>] [-a=<attempts>] --api-key=<api_key> <endpoint>
@@ -21,3 +21,4 @@ Available options:
                              BITPING_API_KEY environment variable.
     -h, --help               Prints help information
     -V, --version            Prints version information****```
+````
