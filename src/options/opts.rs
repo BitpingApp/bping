@@ -124,13 +124,38 @@ pub fn parse_alpha_codes(regions: &str) -> eyre::Result<Vec<EarthRegion>> {
             continue;
         }
 
-        if let "america" = region_part.to_lowercase().as_str() {
-            println!("Assuming North and South America.");
-            regions.extend_from_slice(&[
-                EarthRegion::Continent(Continent::NorthAmerica),
-                EarthRegion::Continent(Continent::SouthAmerica),
-            ]);
-            continue;
+        match region_part.to_lowercase().as_str() {
+            "america" => {
+                println!("Assuming North and South America.");
+                regions.extend_from_slice(&[
+                    EarthRegion::Continent(Continent::NorthAmerica),
+                    EarthRegion::Continent(Continent::SouthAmerica),
+                ]);
+            }
+            "af" | "africa" => {
+                regions.push(EarthRegion::Continent(Continent::Africa));
+            }
+            "an" | "antarctica" => {
+                regions.push(EarthRegion::Continent(Continent::Antarctica));
+            }
+            "as" | "asia" => {
+                regions.push(EarthRegion::Continent(Continent::Asia));
+            }
+            "eu" | "europe" => {
+                regions.push(EarthRegion::Continent(Continent::Europe));
+            }
+            "na" | "north america" => {
+                regions.push(EarthRegion::Continent(Continent::NorthAmerica));
+            }
+            "oc" | "oceania" => {
+                regions.push(EarthRegion::Continent(Continent::Australia));
+            }
+            "sa" | "south america" => {
+                regions.push(EarthRegion::Continent(Continent::SouthAmerica));
+            }
+            _ => {
+                tracing::warn!("Unable to identify region '{region_part}'. Skipping.");
+            }
         }
 
         tracing::warn!("Unable to identify region '{region_part}'. Skipping.");
