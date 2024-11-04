@@ -2,6 +2,17 @@
 
 ![Bping demo](./bping-demo.gif)
 
+## 🚀 Ready to Start Pinging?
+
+1. Head over to [developer.bitping.com](https://developer.bitping.com/pricing) to create your free account
+2. Create your API key in the developer dashboard
+3. Set the API Key environment variable
+   - eg. `export BITPING_API_KEY=your_api_key`
+
+With your API key in hand, you'll be ready to ping from anywhere in the world! 
+
+### Help Documentation
+---
 ````
 A command line utility to ping a website from anywhere in the world!
 
