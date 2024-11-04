@@ -10,6 +10,7 @@ use models::{
     Client,
 };
 use options::Opts;
+use progenitor::progenitor_client::ResponseValue;
 use rand::seq::SliceRandom;
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::{
@@ -70,63 +71,67 @@ async fn main() -> eyre::Result<()> {
 
     pb.set_style(spinner_style);
 
-    let mut set = JoinSet::new();
-
     for region in &APP_CONFIG.regions {
-        for _ in 0..APP_CONFIG.attempts {
-            let pb = pb.clone();
-            set.spawn(async move {
-                let (country_code, continent_code) = match region {
-                    options::EarthRegion::Country(c) => {
-                        (Some(c.to_country().alpha2().to_string()), None)
-                    }
-                    options::EarthRegion::Continent(con) => (
-                        None,
-                        Some(
-                            match con {
-                                keshvar::Continent::Africa => "AF",
-                                keshvar::Continent::Antarctica => "AN",
-                                keshvar::Continent::Asia => "AS",
-                                keshvar::Continent::Australia => "OC",
-                                keshvar::Continent::Europe => "EU",
-                                keshvar::Continent::NorthAmerica => "NA",
-                                keshvar::Continent::SouthAmerica => "SA",
-                            }
-                            .to_string(),
+        for chunk in (0..APP_CONFIG.attempts).collect::<Vec<_>>().chunks(100) {
+            let mut chunk_set = JoinSet::new();
+
+            for _ in chunk {
+                let pb = pb.clone();
+                let region = region.clone();
+                let endpoint = endpoint.clone();
+
+                chunk_set.spawn(async move {
+                    let (country_code, continent_code) = match region {
+                        options::EarthRegion::Country(c) => {
+                            (Some(c.to_country().alpha2().to_string()), None)
+                        }
+                        options::EarthRegion::Continent(con) => (
+                            None,
+                            Some(
+                                match con {
+                                    keshvar::Continent::Africa => "AF",
+                                    keshvar::Continent::Antarctica => "AN",
+                                    keshvar::Continent::Asia => "AS",
+                                    keshvar::Continent::Australia => "OC",
+                                    keshvar::Continent::Europe => "EU",
+                                    keshvar::Continent::NorthAmerica => "NA",
+                                    keshvar::Continent::SouthAmerica => "SA",
+                                }
+                                .to_string(),
+                            ),
                         ),
-                    ),
-                    _ => (None, None),
-                };
+                        _ => (None, None),
+                    };
 
-                debug!(?country_code, "Sending job to country");
+                    debug!(?country_code, "Sending job to country");
 
-                let result = API_CLIENT
-                    .perform_icmp(&PerformIcmpBody {
-                        configuration: Some(PerformIcmpBodyConfiguration {
-                            payload_size: Some(56.0),
-                            timeout_millis: None,
-                            attempts: Some(APP_CONFIG.count as f64),
-                        }),
-                        country_code,
-                        continent_code,
-                        hostnames: vec![endpoint.to_string()],
-                        isp_regex: None,
-                    })
-                    .await
-                    .context("Failed to send job");
+                    let result = API_CLIENT
+                        .perform_icmp(&PerformIcmpBody {
+                            configuration: Some(PerformIcmpBodyConfiguration {
+                                payload_size: Some(56.0),
+                                timeout_millis: None,
+                                attempts: Some(APP_CONFIG.count as f64),
+                            }),
+                            country_code,
+                            continent_code,
+                            hostnames: vec![endpoint.to_string()],
+                            isp_regex: None,
+                        })
+                        .await
+                        .context("Failed to send job");
 
-                pb.inc(1);
+                    pb.inc(1);
 
-                result
-            });
+                    result
+                });
+            }
+
+            while let Some(res) = chunk_set.join_next().await {
+                let out = res??;
+                tracing::debug!("Response {:?}", out);
+                display_job(&pb, &APP_CONFIG, &out).await;
+            }
         }
-    }
-
-    while let Some(res) = set.join_next().await {
-        let out = res??;
-        tracing::debug!("Response {:?}", out);
-
-        display_job(&pb, &APP_CONFIG, &out).await;
     }
 
     pb.finish();

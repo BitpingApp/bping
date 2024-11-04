@@ -35,13 +35,15 @@ pub fn display_success_ping(
             "│ 64 bytes from {}: icmp_seq={} ttl=120 time={:.2} ms",
             jobres.ip_address, i, time
         ));
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(time as u64));
     }
 
     pb.println("│"); // Empty line for spacing
 
     // Construct and print statistics line
     pb.println(format!("│ --- {endpoint} ping statistics ---"));
+
+    std::thread::sleep(std::time::Duration::from_millis(250));
 
     // Print packet loss information
     pb.println(format!(
@@ -50,12 +52,14 @@ pub fn display_success_ping(
         jobres.packets_recv,
         jobres.packet_loss * 100.0
     ));
+    std::thread::sleep(std::time::Duration::from_millis(250));
 
     // Print round-trip statistics
     pb.println(format!(
         "│ round-trip min/avg/max/stddev = {:.3}/{:.3}/{:.3}/{:.3} ms",
         jobres.min, jobres.avg, jobres.max, jobres.std_dev
     ));
+    std::thread::sleep(std::time::Duration::from_millis(250));
 
     print_footer(pb, width);
 }
@@ -84,6 +88,8 @@ pub fn display_failed_ping(
     // --- asdasdasd.com ping statistics ---
     pb.println(format!("│ --- {} ping statistics ---", jobres.endpoint));
 
+    std::thread::sleep(std::time::Duration::from_millis(250));
+
     // 5 packets transmitted, 0 packets received, 100.0% packet loss
     let error_string = if let Some(result) = &jobres.result {
         format!(
@@ -98,7 +104,10 @@ pub fn display_failed_ping(
             attempts
         )
     };
+    std::thread::sleep(std::time::Duration::from_millis(250));
+
     pb.println(format!("{}", error_string.color(Color::Red)));
+    std::thread::sleep(std::time::Duration::from_millis(250));
 
     print_footer(pb, width);
 }
