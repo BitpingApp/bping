@@ -57,9 +57,9 @@ impl Opts {
             regions,
             count,
             attempts,
+            concurrency,
             api_key,
             endpoint,
-            concurrency
         })
         .to_options()
         .descr("A command line utility to ping a website from anywhere in the world!")

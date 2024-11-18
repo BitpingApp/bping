@@ -41,6 +41,7 @@ jobs:
             os: ubuntu-latest
             asset_name: bping-aarch64-linux-gnu
             gcc_package: gcc-aarch64-linux-gnu
+            linker: aarch64-linux-gnu-gcc
           - target: aarch64-apple-darwin
             os: macos-latest
             asset_name: bping-aarch64-darwin
@@ -48,10 +49,12 @@ jobs:
             os: ubuntu-latest
             asset_name: bping-arm-linux-gnueabi
             gcc_package: gcc-arm-linux-gnueabi
+            linker: arm-linux-gnueabi-gcc
           - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             asset_name: bping-armv7-linux-gnueabihf
             gcc_package: gcc-arm-linux-gnueabihf
+            linker: arm-linux-gnueabihf-gcc
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             asset_name: bping-x86_64-linux-musl
@@ -68,6 +71,13 @@ jobs:
           if [ ! -z "${{ matrix.gcc_package }}" ]; then
             sudo apt-get install -y ${{ matrix.gcc_package }}
           fi
+
+      - name: Configure Cargo for cross-compilation
+        if: matrix.linker != ''
+        run: |
+          mkdir -p ~/.cargo
+          echo "[target.${{ matrix.target }}]" >> ~/.cargo/config.toml
+          echo "linker = \"${{ matrix.linker }}\"" >> ~/.cargo/config.toml
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -110,7 +120,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "${{ matrix.target }}" != "aarch64-apple-darwin" ]; then
-            if [ -n "${{ matrix.gcc_package }}" ]; then
+            if [ -n "${{ matrix.linker }}" ]; then
               ${{ matrix.target }}-strip target/${{ matrix.target }}/release/bping
             else
               strip target/${{ matrix.target }}/release/bping
