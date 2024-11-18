@@ -7,25 +7,44 @@ on:
 
 jobs:
   publish:
-    name: Publish for ${{ matrix.os }}
+    name: Publish for ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        name: [linux, windows, macos]
-
         include:
-          - name: linux
+          # Tier 1 Platforms
+          - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact_name: bping
-            asset_name: bping-linux
-          - name: windows
+            asset_name: bping-x86_64-linux-gnu
+          - target: x86_64-pc-windows-msvc
             os: windows-latest
-            artifact_name: bping.exe
-            asset_name: bping-windows
-          - name: macos
+            asset_name: bping-x86_64-windows-msvc.exe
+          - target: x86_64-apple-darwin
             os: macos-latest
-            artifact_name: bping
-            asset_name: bping-macos
+            asset_name: bping-x86_64-darwin
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+            asset_name: bping-i686-windows-msvc.exe
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-latest
+            asset_name: bping-i686-linux-gnu
+
+          # Tier 2 Platforms
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            asset_name: bping-aarch64-linux-gnu
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            asset_name: bping-aarch64-darwin
+          - target: arm-unknown-linux-gnueabi
+            os: ubuntu-latest
+            asset_name: bping-arm-linux-gnueabi
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            asset_name: bping-armv7-linux-gnueabihf
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            asset_name: bping-x86_64-linux-musl
 
     steps:
       - uses: actions/checkout@v1
@@ -34,18 +53,23 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
 
       - name: Build
-        run: cargo build --release
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
 
-      - name: Strip
-        run: strip target/release/${{ matrix.artifact_name }}
+      - name: Strip binary
         if: runner.os != 'Windows'
+        run: strip target/${{ matrix.target }}/release/bping
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/${{ matrix.artifact_name }}
+          file: target/${{ matrix.target }}/release/bping${{ runner.os == 'Windows' && '.exe' || '' }}
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}

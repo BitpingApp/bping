@@ -11,6 +11,7 @@ pub struct Opts {
     pub count: usize,
     pub attempts: usize,
     pub api_key: String,
+    pub concurrency: usize,
 }
 
 impl Opts {
@@ -47,12 +48,18 @@ impl Opts {
             .env("BITPING_API_KEY")
             .argument("api_key");
 
+        let concurrency = bpaf::long("concurrency")
+            .help("Specifies how many concurrent requests to send at once. Defaults to 100.")
+            .argument::<usize>("concurrency")
+            .fallback(100);
+
         bpaf::construct!(Opts {
             regions,
             count,
             attempts,
             api_key,
             endpoint,
+            concurrency
         })
         .to_options()
         .descr("A command line utility to ping a website from anywhere in the world!")
