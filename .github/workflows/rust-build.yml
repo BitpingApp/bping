@@ -34,23 +34,28 @@ jobs:
           - target: i686-unknown-linux-gnu
             os: ubuntu-latest
             artifact_name: bping
+            gcc_package: gcc-multilib
 
           # Tier 2 Platforms
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             artifact_name: bping
+            gcc_package: gcc-aarch64-linux-gnu
           - target: aarch64-apple-darwin
             os: macos-latest
             artifact_name: bping
           - target: arm-unknown-linux-gnueabi
             os: ubuntu-latest
             artifact_name: bping
+            gcc_package: gcc-arm-linux-gnueabi
           - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             artifact_name: bping
+            gcc_package: gcc-arm-linux-gnueabihf
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             artifact_name: bping
+            gcc_package: musl-tools
 
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +65,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y curl build-essential pkg-config libssl-dev
+          if [ ! -z "${{ matrix.gcc_package }}" ]; then
+            sudo apt-get install -y ${{ matrix.gcc_package }}
+          fi
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -98,7 +106,6 @@ jobs:
       - name: Show sccache stats
         run: sccache --show-stats
 
-      # Optional: Upload artifacts if needed
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:

@@ -34,23 +34,28 @@ jobs:
           - target: i686-unknown-linux-gnu
             os: ubuntu-latest
             asset_name: bping-i686-linux-gnu
+            gcc_package: gcc-multilib
 
           # Tier 2 Platforms
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             asset_name: bping-aarch64-linux-gnu
+            gcc_package: gcc-aarch64-linux-gnu
           - target: aarch64-apple-darwin
             os: macos-latest
             asset_name: bping-aarch64-darwin
           - target: arm-unknown-linux-gnueabi
             os: ubuntu-latest
             asset_name: bping-arm-linux-gnueabi
+            gcc_package: gcc-arm-linux-gnueabi
           - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             asset_name: bping-armv7-linux-gnueabihf
+            gcc_package: gcc-arm-linux-gnueabihf
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             asset_name: bping-x86_64-linux-musl
+            gcc_package: musl-tools
 
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +65,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y curl build-essential pkg-config libssl-dev
+          if [ ! -z "${{ matrix.gcc_package }}" ]; then
+            sudo apt-get install -y ${{ matrix.gcc_package }}
+          fi
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -100,7 +108,14 @@ jobs:
 
       - name: Strip binary
         if: runner.os != 'Windows'
-        run: strip target/${{ matrix.target }}/release/bping
+        run: |
+          if [ "${{ matrix.target }}" != "aarch64-apple-darwin" ]; then
+            if [ -n "${{ matrix.gcc_package }}" ]; then
+              ${{ matrix.target }}-strip target/${{ matrix.target }}/release/bping
+            else
+              strip target/${{ matrix.target }}/release/bping
+            fi
+          fi
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v1-release
@@ -110,7 +125,6 @@ jobs:
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
 
-      # Optional: Upload artifacts for debugging or additional processing
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
