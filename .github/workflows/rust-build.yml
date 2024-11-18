@@ -1,9 +1,15 @@
 name: Build
 
 on:
-  pull_request:
+  push:
     branches:
       - "*"
+
+env:
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: true
+  SCCACHE_CACHE_SIZE: 2G
+  SCCACHE_DIR: /home/runner/.cache/sccache
 
 jobs:
   build:
@@ -47,17 +53,54 @@ jobs:
             artifact_name: bping
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
+      - name: Install build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl build-essential pkg-config libssl-dev
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
 
+      - name: Configure sccache
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v1-rust"
+          shared-key: "${{ matrix.target }}-build"
+          cache-targets: "true"
+          cache-on-failure: "true"
+          cache-all-crates: "true"
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+          workspaces: |
+            . -> target
+
       - name: Build
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --target ${{ matrix.target }}
+
+      - name: Show sccache stats
+        run: sccache --show-stats
+
+      # Optional: Upload artifacts if needed
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.target }}-binary
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}

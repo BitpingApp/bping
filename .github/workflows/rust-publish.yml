@@ -5,6 +5,12 @@ on:
     tags:
       - "*"
 
+env:
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: true
+  SCCACHE_CACHE_SIZE: 2G
+  SCCACHE_DIR: /home/runner/.cache/sccache
+
 jobs:
   publish:
     name: Publish for ${{ matrix.target }}
@@ -47,20 +53,50 @@ jobs:
             asset_name: bping-x86_64-linux-musl
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
+      - name: Install build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl build-essential pkg-config libssl-dev
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
 
+      - name: Configure sccache
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v1-rust"
+          shared-key: "${{ matrix.target }}-release"
+          cache-targets: "true"
+          cache-on-failure: "true"
+          cache-all-crates: "true"
+          save-if: true # Always save cache for tagged releases
+          workspaces: |
+            . -> target
+
       - name: Build
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --target ${{ matrix.target }}
+
+      - name: Show sccache stats
+        run: sccache --show-stats
 
       - name: Strip binary
         if: runner.os != 'Windows'
@@ -73,3 +109,10 @@ jobs:
           file: target/${{ matrix.target }}/release/bping${{ runner.os == 'Windows' && '.exe' || '' }}
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
+
+      # Optional: Upload artifacts for debugging or additional processing
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.target }}-release-binary
+          path: target/${{ matrix.target }}/release/bping${{ runner.os == 'Windows' && '.exe' || '' }}
