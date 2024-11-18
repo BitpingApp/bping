@@ -120,11 +120,20 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "${{ matrix.target }}" != "aarch64-apple-darwin" ]; then
-            if [ -n "${{ matrix.linker }}" ]; then
-              ${{ matrix.target }}-strip target/${{ matrix.target }}/release/bping
-            else
-              strip target/${{ matrix.target }}/release/bping
-            fi
+            case "${{ matrix.target }}" in
+              "aarch64-unknown-linux-gnu")
+                aarch64-linux-gnu-strip target/${{ matrix.target }}/release/bping
+                ;;
+              "arm-unknown-linux-gnueabi")
+                arm-linux-gnueabi-strip target/${{ matrix.target }}/release/bping
+                ;;
+              "armv7-unknown-linux-gnueabihf")
+                arm-linux-gnueabihf-strip target/${{ matrix.target }}/release/bping
+                ;;
+              *)
+                strip target/${{ matrix.target }}/release/bping
+                ;;
+            esac
           fi
 
       - name: Upload binaries to release
