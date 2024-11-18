@@ -72,7 +72,10 @@ async fn main() -> eyre::Result<()> {
     pb.set_style(spinner_style);
 
     for region in &APP_CONFIG.regions {
-        for chunk in (0..APP_CONFIG.attempts).collect::<Vec<_>>().chunks(100) {
+        for chunk in (0..APP_CONFIG.attempts)
+            .collect::<Vec<_>>()
+            .chunks(APP_CONFIG.concurrency)
+        {
             let mut chunk_set = JoinSet::new();
 
             for _ in chunk {
@@ -137,37 +140,3 @@ async fn main() -> eyre::Result<()> {
     pb.finish();
     Ok(())
 }
-
-// async fn perform_job(
-//     req: &models::CreateJobAPIRequest,
-//     token: &str,
-// ) -> Result<GetJobAPIResponse, BpingErrors> {
-//     let resp = api::post_job(req, token).await?;
-//     let job_id = resp.id;
-//     let res = api::get_job_results(&job_id, token).await?;
-//     Ok(res)
-// }
-//
-// async fn check_node_availability(parsed_regions: Vec<String>) -> Result<(), BpingErrors> {
-//     if let Ok(available_nodes) = api::get_available_nodes().await {
-//         for region in parsed_regions {
-//             if custom_validators::is_continent(&region) {
-//                 continue;
-//             }
-//
-//             if let Some(country_code) = custom_validators::get_emoji_safe_region_code(&region) {
-//                 if let None = available_nodes
-//                     .results
-//                     .iter()
-//                     .find(|x| x.countrycode == country_code)
-//                 {
-//                     return Err(BpingErrors::JobErrors(
-//                         crate::api::JobErrors::UnableToFindNodes,
-//                     ));
-//                 }
-//             }
-//         }
-//     }
-//
-//     Ok(())
-// }
