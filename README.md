@@ -11,12 +11,20 @@
 
 With your API key in hand, you'll be ready to ping from anywhere in the world!
 
-## Installation
+## Linux/MacOS Installation
 
 You can install bping directly using this command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/BitpingApp/bping/master/install.sh | bash
+```
+
+## Windows Installation
+
+You can install bping on Windows by running this command in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/BitpingApp/bping/master/install.ps1 | iex
 ```
 
 ### Help Documentation
