@@ -41,6 +41,7 @@ jobs:
             os: ubuntu-latest
             artifact_name: bping
             gcc_package: gcc-aarch64-linux-gnu
+            linker: aarch64-linux-gnu-gcc
           - target: aarch64-apple-darwin
             os: macos-latest
             artifact_name: bping
@@ -48,10 +49,12 @@ jobs:
             os: ubuntu-latest
             artifact_name: bping
             gcc_package: gcc-arm-linux-gnueabi
+            linker: arm-linux-gnueabi-gcc
           - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             artifact_name: bping
             gcc_package: gcc-arm-linux-gnueabihf
+            linker: arm-linux-gnueabihf-gcc
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             artifact_name: bping
@@ -68,6 +71,13 @@ jobs:
           if [ ! -z "${{ matrix.gcc_package }}" ]; then
             sudo apt-get install -y ${{ matrix.gcc_package }}
           fi
+
+      - name: Configure Cargo for cross-compilation
+        if: matrix.linker != ''
+        run: |
+          mkdir -p ~/.cargo
+          echo "[target.${{ matrix.target }}]" >> ~/.cargo/config.toml
+          echo "linker = \"${{ matrix.linker }}\"" >> ~/.cargo/config.toml
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
