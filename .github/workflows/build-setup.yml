@@ -1,0 +1,19 @@
+- name: Configure sccache
+  run: |
+    echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+    echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+
+- name: Run sccache-cache
+  uses: mozilla-actions/sccache-action@v0.0.6
+
+- name: Rust Cache
+  uses: Swatinem/rust-cache@v2
+  with:
+    prefix-key: "v1-rust"
+    shared-key: "${{ matrix.target }}-build"
+    cache-targets: "true"
+    cache-on-failure: "true"
+    cache-all-crates: "true"
+    save-if: ${{ github.ref == 'refs/heads/master' }}
+    workspaces: |
+      . -> target
