@@ -69,6 +69,7 @@
 
         <Package Id='*'
             Keywords='Installer'
+            Description='A command line utility to ping a website from anywhere in the world!'
             Manufacturer='Firaenix'
             InstallerVersion='450'
             Languages='1033'
@@ -172,7 +173,7 @@
         <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
         <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
-        <Property Id='ARPHELPLINK' Value='https://github.com/BitpingApp/bping'/>
+        <Property Id='ARPHELPLINK' Value='https://bitping.com'/>
         
         <UI>
             <UIRef Id='WixUI_FeatureTree'/>
