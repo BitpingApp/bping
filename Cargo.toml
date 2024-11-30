@@ -1,14 +1,26 @@
 [package]
 name = "bping"
-version = "2.0.1"
+version = "2.0.4"
 authors = ["Firaenix <Nick.Carton@gmail.com>"]
 edition = "2021"
 resolver = "2"
+repository = "https://github.com/BitpingApp/bping"
+
+[package.metadata.wix]
+upgrade-guid = "C77C7FB3-4D31-4AEF-9EFE-B8DC66B3DB9F"
+path-guid = "8CE721BB-AC0D-4C60-9853-90F230FEA7EA"
+license = false
+eula = false
 
 
 [profile.release]
 lto = true
 opt-level = "z"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -43,3 +55,4 @@ bpaf = { version = "0.9.15", features = [
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 rand = "0.8.5"
+regress = "0.10.1"

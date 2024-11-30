@@ -4,8 +4,9 @@ use display::display_job;
 use keshvar::Alpha2;
 use models::{
     types::{
-        PerformIcmpBody, PerformIcmpBodyConfiguration, PerformIcmpResponse,
-        PerformIcmpResponseResultsItem,
+        PerformIcmpBody, PerformIcmpBodyConfiguration, PerformIcmpBodyContinentCode,
+        PerformIcmpBodyCountryCode, PerformIcmpBodyMobile, PerformIcmpBodyProxy,
+        PerformIcmpBodyResidential, PerformIcmpResponse, PerformIcmpResponseResultsItem,
     },
     Client,
 };
@@ -15,6 +16,7 @@ use rand::seq::SliceRandom;
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::{
     pin,
+    str::FromStr,
     sync::{LazyLock, OnceLock},
     thread,
     time::Duration,
@@ -85,23 +87,23 @@ async fn main() -> eyre::Result<()> {
 
                 chunk_set.spawn(async move {
                     let (country_code, continent_code) = match region {
-                        options::EarthRegion::Country(c) => {
-                            (Some(c.to_country().alpha2().to_string()), None)
-                        }
+                        options::EarthRegion::Country(c) => (
+                            Some(PerformIcmpBodyCountryCode::from_str(
+                                &c.to_country().alpha2().to_string(),
+                            )?),
+                            None,
+                        ),
                         options::EarthRegion::Continent(con) => (
                             None,
-                            Some(
-                                match con {
-                                    keshvar::Continent::Africa => "AF",
-                                    keshvar::Continent::Antarctica => "AN",
-                                    keshvar::Continent::Asia => "AS",
-                                    keshvar::Continent::Australia => "OC",
-                                    keshvar::Continent::Europe => "EU",
-                                    keshvar::Continent::NorthAmerica => "NA",
-                                    keshvar::Continent::SouthAmerica => "SA",
-                                }
-                                .to_string(),
-                            ),
+                            Some(PerformIcmpBodyContinentCode::from_str(match con {
+                                keshvar::Continent::Africa => "AF",
+                                keshvar::Continent::Antarctica => "AN",
+                                keshvar::Continent::Asia => "AS",
+                                keshvar::Continent::Australia => "OC",
+                                keshvar::Continent::Europe => "EU",
+                                keshvar::Continent::NorthAmerica => "NA",
+                                keshvar::Continent::SouthAmerica => "SA",
+                            })?),
                         ),
                         _ => (None, None),
                     };
@@ -119,6 +121,11 @@ async fn main() -> eyre::Result<()> {
                             continent_code,
                             hostnames: vec![endpoint.to_string()],
                             isp_regex: None,
+                            city: None,
+                            mobile: PerformIcmpBodyMobile::from_str("ALLOWED")?,
+                            node_id: None,
+                            proxy: PerformIcmpBodyProxy::from_str("ALLOWED")?,
+                            residential: PerformIcmpBodyResidential::from_str("ALLOWED")?,
                         })
                         .await
                         .context("Failed to send job");
@@ -130,9 +137,18 @@ async fn main() -> eyre::Result<()> {
             }
 
             while let Some(res) = chunk_set.join_next().await {
-                let out = res??;
-                tracing::debug!("Response {:?}", out);
-                display_job(&pb, &APP_CONFIG, &out).await;
+                match res {
+                    Ok(Ok(out)) => {
+                        tracing::debug!("Response {:?}", out);
+                        display_job(&pb, &APP_CONFIG, &out).await;
+                    }
+                    Ok(Err(e)) => {
+                        tracing::error!("API request failed: {}", e);
+                    }
+                    Err(e) => {
+                        tracing::error!("Task join error: {}", e);
+                    }
+                }
             }
         }
     }
