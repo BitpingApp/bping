@@ -1,6 +1,35 @@
+use std::fmt::Display;
+
 use bpaf::{long, OptionParser, Parser};
 use color_eyre::eyre;
 use keshvar::Continent;
+
+#[derive(Debug, Clone)]
+pub enum NetworkPolicy {
+    Allowed,
+    Denied,
+    Required,
+}
+
+impl From<Option<bool>> for NetworkPolicy {
+    fn from(_value: Option<bool>) -> Self {
+        match _value {
+            None => NetworkPolicy::Allowed,
+            Some(true) => NetworkPolicy::Required,
+            Some(false) => NetworkPolicy::Denied,
+        }
+    }
+}
+
+impl Display for NetworkPolicy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NetworkPolicy::Allowed => write!(f, "ALLOWED"),
+            NetworkPolicy::Denied => write!(f, "DENIED"),
+            NetworkPolicy::Required => write!(f, "REQUIRED"),
+        }
+    }
+}
 
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields
@@ -12,6 +41,9 @@ pub struct Opts {
     pub attempts: usize,
     pub api_key: String,
     pub concurrency: usize,
+    pub residential: NetworkPolicy,
+    pub mobile: NetworkPolicy,
+    pub proxy: NetworkPolicy,
 }
 
 impl Opts {
@@ -53,12 +85,33 @@ impl Opts {
             .argument::<usize>("concurrency")
             .fallback(100);
 
+        let residential = bpaf::long("residential")
+            .help("Control residential network usage. --residential=true to require, --residential=false to deny, omit to allow.")
+            .argument::<bool>("residential")
+            .optional()
+            .map(NetworkPolicy::from);
+
+        let mobile = bpaf::long("mobile")
+            .help("Control mobile network usage. --mobile=true to require, --mobile=false to deny, omit to allow.")
+            .argument::<bool>("mobile")
+            .optional()
+            .map(NetworkPolicy::from);
+
+        let proxy = bpaf::long("proxy")
+            .help("Control proxy network usage. --proxy=true to require, --proxy=false to deny, omit to allow.")
+            .argument::<bool>("proxy")
+            .optional()
+            .map(NetworkPolicy::from);
+
         bpaf::construct!(Opts {
             regions,
             count,
             attempts,
             concurrency,
             api_key,
+            residential,
+            mobile,
+            proxy,
             endpoint,
         })
         .to_options()

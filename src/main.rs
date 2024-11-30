@@ -122,10 +122,14 @@ async fn main() -> eyre::Result<()> {
                             hostnames: vec![endpoint.to_string()],
                             isp_regex: None,
                             city: None,
-                            mobile: PerformIcmpBodyMobile::from_str("ALLOWED")?,
+                            mobile: PerformIcmpBodyMobile::from_str(
+                                &APP_CONFIG.mobile.to_string(),
+                            )?,
                             node_id: None,
-                            proxy: PerformIcmpBodyProxy::from_str("ALLOWED")?,
-                            residential: PerformIcmpBodyResidential::from_str("ALLOWED")?,
+                            proxy: PerformIcmpBodyProxy::from_str(&APP_CONFIG.proxy.to_string())?,
+                            residential: PerformIcmpBodyResidential::from_str(
+                                &APP_CONFIG.residential.to_string(),
+                            )?,
                         })
                         .await
                         .context("Failed to send job");
