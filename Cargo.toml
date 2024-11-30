@@ -1,10 +1,12 @@
 [package]
 name = "bping"
-version = "2.0.4"
+version = "2.0.5"
+description = "A command line utility to ping a website from anywhere in the world!"
 authors = ["Firaenix <Nick.Carton@gmail.com>"]
 edition = "2021"
 resolver = "2"
 repository = "https://github.com/BitpingApp/bping"
+homepage = "https://bitping.com"
 
 [package.metadata.wix]
 upgrade-guid = "C77C7FB3-4D31-4AEF-9EFE-B8DC66B3DB9F"
