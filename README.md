@@ -15,17 +15,28 @@ With your API key in hand, you'll be ready to ping from anywhere in the world!
 
 You can install bping directly using this command:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/BitpingApp/bping/master/install.sh | bash
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/BitpingApp/bping/releases/latest/download/bping-installer.sh | sh
+```
+
+#### Install prebuilt binaries via Homebrew
+
+```sh
+brew install BitpingApp/tap/bping
 ```
 
 ## Windows Installation
 
 You can install bping on Windows by running this command in PowerShell:
 
-```powershell
-irm https://raw.githubusercontent.com/BitpingApp/bping/master/install.ps1 | iex
+```sh
+powershell -ExecutionPolicy ByPass -c "irm https://github.com/BitpingApp/bping/releases/latest/download/bping-installer.ps1 | iex"
 ```
+
+#### Install using Windows Installer
+
+Go to the latest release and download the .msi for windows.
+
 
 ### Help Documentation
 
