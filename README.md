@@ -42,7 +42,7 @@ Go to the latest release and download the .msi for windows.
 
 ---
 
-````
+```
 A command line utility to ping a website from anywhere in the world!
 
 Usage: bping [-r=<regions>] [-c=<count>] [-a=<attempts>] [--concurrency=<concurrency>] --api-key=
@@ -72,8 +72,6 @@ Available options:
     -h, --help               Prints help information
     -V, --version            Prints version information
 ```
-
-````
 
 ```
 
