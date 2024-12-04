@@ -72,7 +72,3 @@ Available options:
     -h, --help               Prints help information
     -V, --version            Prints version information
 ```
-
-```
-
-```
