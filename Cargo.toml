@@ -1,6 +1,6 @@
 [package]
 name = "bping"
-version = "2.0.5"
+version = "2.1.0"
 description = "A command line utility to ping a website from anywhere in the world!"
 authors = ["Firaenix <Nick.Carton@gmail.com>"]
 edition = "2021"
@@ -52,7 +52,8 @@ bpaf = { version = "0.9.15", features = [
   "autocomplete",
   "batteries",
 ] }
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tracing = { version = "0.1", features = ["async-await"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 rand = "0.8.5"
 regress = "0.10.1"
+tokio-retry = "0.3.0"

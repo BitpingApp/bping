@@ -1,8 +1,10 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use bpaf::{long, OptionParser, Parser};
-use color_eyre::eyre;
+use color_eyre::eyre::{self, Result};
 use keshvar::Continent;
+
+use crate::models::types::{PerformIcmpBodyContinentCode, PerformIcmpBodyCountryCode};
 
 #[derive(Debug, Clone)]
 pub enum NetworkPolicy {
@@ -44,6 +46,7 @@ pub struct Opts {
     pub residential: NetworkPolicy,
     pub mobile: NetworkPolicy,
     pub proxy: NetworkPolicy,
+    pub no_delay: bool,
 }
 
 impl Opts {
@@ -103,6 +106,10 @@ impl Opts {
             .optional()
             .map(NetworkPolicy::from);
 
+        let no_delay = bpaf::long("no-delay")
+            .help("Disable delays in output display")
+            .switch();
+
         bpaf::construct!(Opts {
             regions,
             count,
@@ -112,6 +119,7 @@ impl Opts {
             residential,
             mobile,
             proxy,
+            no_delay,
             endpoint,
         })
         .to_options()
@@ -127,6 +135,37 @@ pub enum EarthRegion {
     Anywhere,
 }
 
+impl EarthRegion {
+    pub fn get_codes(
+        &self,
+    ) -> Result<(
+        Option<PerformIcmpBodyCountryCode>,
+        Option<PerformIcmpBodyContinentCode>,
+    )> {
+        Ok(match self {
+            EarthRegion::Country(c) => (
+                Some(PerformIcmpBodyCountryCode::from_str(
+                    &c.to_country().alpha2().to_string(),
+                )?),
+                None,
+            ),
+            EarthRegion::Continent(con) => (
+                None,
+                Some(PerformIcmpBodyContinentCode::from_str(match con {
+                    keshvar::Continent::Africa => "AF",
+                    keshvar::Continent::Antarctica => "AN",
+                    keshvar::Continent::Asia => "AS",
+                    keshvar::Continent::Australia => "OC",
+                    keshvar::Continent::Europe => "EU",
+                    keshvar::Continent::NorthAmerica => "NA",
+                    keshvar::Continent::SouthAmerica => "SA",
+                })?),
+            ),
+            _ => (None, None),
+        })
+    }
+}
+
 impl std::fmt::Display for EarthRegion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -137,7 +176,7 @@ impl std::fmt::Display for EarthRegion {
     }
 }
 
-pub fn parse_alpha_codes(regions: &str) -> eyre::Result<Vec<EarthRegion>> {
+pub fn parse_alpha_codes(regions: &str) -> Result<Vec<EarthRegion>> {
     if regions.trim().to_lowercase() == "anywhere" {
         return Ok(vec![EarthRegion::Anywhere]);
     }

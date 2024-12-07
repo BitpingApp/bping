@@ -6,28 +6,35 @@ use crate::{
     options::Opts,
 };
 use colorful::{Color, Colorful};
+use indicatif::ProgressBar;
 use std::*;
+use sync::Arc;
 
-fn print_border(pb: &indicatif::ProgressBar, width: usize) {
+fn print_border(pb: &ProgressBar, width: usize) {
     pb.println("┌".to_string() + &"─".repeat(width - 2) + "┐");
 }
 
-fn print_footer(pb: &indicatif::ProgressBar, width: usize) {
+fn print_footer(pb: &ProgressBar, width: usize) {
     pb.println("└".to_string() + &"─".repeat(width - 2) + "┘");
 }
 
-pub fn display_success_ping(
-    pb: &indicatif::ProgressBar,
-    config: &Opts,
+async fn sleep_if_enabled(config: &'static Opts, duration: u64) {
+    if !config.no_delay {
+        tokio::time::sleep(std::time::Duration::from_millis(duration)).await;
+    }
+}
+
+pub async fn display_success_ping(
+    pb: &ProgressBar,
+    config: &'static Opts,
     endpoint: &str,
     jobres: &PerformIcmpResponseResultsItemResult,
     node_info: &PerformIcmpResponseNodeInfo,
 ) {
-    let width = 80; // Adjust this value as needed
+    let width = 80;
     print_border(pb, width);
     format_ping_header(pb, config, endpoint, &jobres.ip_address, node_info);
 
-    // Display individual ping results
     let trips = jobres.trips as usize;
     for i in 0..trips {
         let time = jobres.min + (jobres.max - jobres.min) * (i as f64 / (trips - 1) as f64);
@@ -35,42 +42,38 @@ pub fn display_success_ping(
             "│ 64 bytes from {}: icmp_seq={} ttl=120 time={:.2} ms",
             jobres.ip_address, i, time
         ));
-        std::thread::sleep(std::time::Duration::from_millis(time as u64));
+        sleep_if_enabled(config, time as u64).await;
     }
 
-    pb.println("│"); // Empty line for spacing
-
-    // Construct and print statistics line
+    pb.println("│");
     pb.println(format!("│ --- {endpoint} ping statistics ---"));
 
-    std::thread::sleep(std::time::Duration::from_millis(250));
+    sleep_if_enabled(config, 250).await;
 
-    // Print packet loss information
     pb.println(format!(
         "│ {} packets transmitted, {} packets received, {:.1}% packet loss",
         jobres.packets_sent,
         jobres.packets_recv,
         jobres.packet_loss * 100.0
     ));
-    std::thread::sleep(std::time::Duration::from_millis(250));
+    sleep_if_enabled(config, 250).await;
 
-    // Print round-trip statistics
     pb.println(format!(
         "│ round-trip min/avg/max/stddev = {:.3}/{:.3}/{:.3}/{:.3} ms",
         jobres.min, jobres.avg, jobres.max, jobres.std_dev
     ));
-    std::thread::sleep(std::time::Duration::from_millis(250));
+    sleep_if_enabled(config, 250).await;
 
     print_footer(pb, width);
 }
 
-pub fn display_failed_ping(
-    pb: &indicatif::ProgressBar,
-    config: &Opts,
+pub async fn display_failed_ping(
+    pb: &ProgressBar,
+    config: &'static Opts,
     jobres: &PerformIcmpResponseResultsItem,
     node_info: &PerformIcmpResponseNodeInfo,
 ) {
-    let width = 80; // Adjust this value as needed
+    let width = 80;
     print_border(pb, width);
     let ip_address = jobres
         .result
@@ -78,19 +81,15 @@ pub fn display_failed_ping(
         .map_or("Unknown".to_string(), |r| r.ip_address.clone());
     format_ping_header(pb, config, &jobres.endpoint, &ip_address, node_info);
 
-    // Request timeout for icmp_seq 0, 1, 2, 3
     let attempts = jobres.result.as_ref().map_or(4, |r| r.attempts as usize);
     for index in 0..attempts {
         pb.println(format!("│ Request timeout for icmp_seq {}", index));
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        sleep_if_enabled(config, 500).await;
     }
 
-    // --- asdasdasd.com ping statistics ---
     pb.println(format!("│ --- {} ping statistics ---", jobres.endpoint));
+    sleep_if_enabled(config, 250).await;
 
-    std::thread::sleep(std::time::Duration::from_millis(250));
-
-    // 5 packets transmitted, 0 packets received, 100.0% packet loss
     let error_string = if let Some(result) = &jobres.result {
         format!(
             "│ {} packets transmitted, {} packets received, {:.1}% packet loss",
@@ -104,16 +103,16 @@ pub fn display_failed_ping(
             attempts
         )
     };
-    std::thread::sleep(std::time::Duration::from_millis(250));
+    sleep_if_enabled(config, 250).await;
 
     pb.println(format!("{}", error_string.color(Color::Red)));
-    std::thread::sleep(std::time::Duration::from_millis(250));
+    sleep_if_enabled(config, 250).await;
 
     print_footer(pb, width);
 }
 
 pub fn format_ping_header(
-    pb: &indicatif::ProgressBar,
+    pb: &ProgressBar,
     config: &Opts,
     endpoint: &str,
     ip_address: &str,
