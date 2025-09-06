@@ -4,7 +4,10 @@ use bpaf::{long, OptionParser, Parser};
 use color_eyre::eyre::{self, Result};
 use keshvar::Continent;
 
-use crate::models::types::{PerformIcmpBodyContinentCode, PerformIcmpBodyCountryCode};
+use crate::models::{
+    errors::Errors,
+    types::{PerformIcmpBodyContinentCode, PerformIcmpBodyCountryCode},
+};
 
 #[derive(Debug, Clone)]
 pub enum NetworkPolicy {
@@ -138,10 +141,13 @@ pub enum EarthRegion {
 impl EarthRegion {
     pub fn get_codes(
         &self,
-    ) -> Result<(
-        Option<PerformIcmpBodyCountryCode>,
-        Option<PerformIcmpBodyContinentCode>,
-    )> {
+    ) -> Result<
+        (
+            Option<PerformIcmpBodyCountryCode>,
+            Option<PerformIcmpBodyContinentCode>,
+        ),
+        Errors,
+    > {
         Ok(match self {
             EarthRegion::Country(c) => (
                 Some(PerformIcmpBodyCountryCode::from_str(

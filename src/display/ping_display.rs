@@ -9,6 +9,7 @@ use colorful::{Color, Colorful};
 use indicatif::ProgressBar;
 use std::*;
 use sync::Arc;
+use tracing::warn;
 
 fn print_border(pb: &ProgressBar, width: usize) {
     pb.println("┌".to_string() + &"─".repeat(width - 2) + "┐");
@@ -122,44 +123,33 @@ pub fn format_ping_header(
     let ping_line = format!("│ PING {} ({}): 56 data bytes", endpoint, ip_address);
     pb.println(ping_line);
 
-    // Origin line
-    let country_emoji = node_info.country_code.as_ref().and_then(|cc| {
-        keshvar::Alpha2::try_from(cc.as_str())
-            .ok()
-            .map(|c| c.to_country().emoji())
-    });
+    let Some(alpha2) = keshvar::Alpha2::try_from(node_info.country_code.as_str()).ok() else {
+        warn!("Failed to get alpha2 for country code");
+        return;
+    };
 
-    let country_name = keshvar::Alpha2::try_from(node_info.country_code.as_deref().unwrap_or(""))
-        .ok()
-        .map(|c| c.to_country().iso_short_name())
-        .unwrap_or("Unknown");
+    // Origin line
+    let country_emoji = alpha2.to_country().emoji();
+
+    let country_name = alpha2.to_country().iso_short_name();
 
     let coordinates = match (node_info.lat, node_info.lon) {
-        (Some(lat), Some(lon)) => format!("({:.2}°N, {:.2}°E)", lat, lon),
+        (lat, lon) => format!("({:.2}°N, {:.2}°E)", lat, lon),
         _ => String::new(),
     };
 
     let origin_line = format!(
         "│ ├── Origin: {} {}, {} {}",
-        country_emoji.unwrap_or(""),
-        node_info.region_name.as_deref().unwrap_or("Unknown"),
-        country_name,
-        coordinates
+        country_emoji, node_info.region_name, country_name, coordinates
     );
     pb.println(origin_line);
 
     // ISP line
-    let isp_line = format!(
-        "│ ├── ISP: {}",
-        node_info.isp.as_deref().unwrap_or("Unknown")
-    );
+    let isp_line = format!("│ ├── ISP: {}", node_info.isp);
     pb.println(isp_line);
 
     // System line
-    let system_line = format!(
-        "│ └── System: {}",
-        node_info.operating_system.as_deref().unwrap_or("Unknown")
-    );
+    let system_line = format!("│ └── System: {}", node_info.operating_system);
     pb.println(system_line);
 
     // Separator line

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use indicatif::ProgressBar;
-use tracing::error;
+use tracing::{error, warn};
 
 use crate::{models::types::PerformIcmpResponse, options::Opts};
 
@@ -15,8 +15,13 @@ pub async fn display_job(pb: &ProgressBar, config: &'static Opts, job_data: Perf
         }
 
         if let Some(job_result) = &result.result {
+            let Some(ref node_info) = job_data.node_info else {
+                warn!("Unable to get node info for job");
+                continue;
+            };
+
             if job_result.packet_loss == 1.0 {
-                ping_display::display_failed_ping(&pb, &config, result, &job_data.node_info).await;
+                ping_display::display_failed_ping(&pb, &config, result, node_info).await;
                 continue;
             }
 
@@ -25,7 +30,7 @@ pub async fn display_job(pb: &ProgressBar, config: &'static Opts, job_data: Perf
                 &config,
                 &result.endpoint,
                 job_result,
-                &job_data.node_info,
+                node_info,
             )
             .await;
         }

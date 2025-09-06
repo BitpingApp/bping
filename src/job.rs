@@ -1,6 +1,6 @@
 use crate::{
     display::{ProgressDisplay, ProgressUpdater},
-    models::*,
+    models::{errors::Errors, *},
     options::{EarthRegion, Opts},
 };
 use color_eyre::eyre::{self, Context, Result};
@@ -8,7 +8,7 @@ use futures::stream::{self, StreamExt};
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::{iter::repeat, str::FromStr, sync::Arc, time::Duration};
 use tokio_retry::{strategy::ExponentialBackoff, Retry};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use types::{
     PerformIcmpBody, PerformIcmpBodyConfiguration, PerformIcmpBodyContinentCode,
     PerformIcmpBodyCountryCode, PerformIcmpBodyMobile, PerformIcmpBodyProxy,
@@ -29,7 +29,7 @@ impl IcmpJob {
     pub async fn execute(
         &self,
         client: &Client,
-    ) -> eyre::Result<ResponseValue<PerformIcmpResponse>> {
+    ) -> Result<ResponseValue<PerformIcmpResponse>, Errors> {
         info!(
             region = ?self.region,
             attempts = self.config.count,
@@ -56,6 +56,8 @@ impl IcmpJob {
             )?,
         };
 
+        debug!(?request, "Sending ICMP Request");
+
         self.execute_with_retry(client, request).await
     }
 
@@ -63,18 +65,15 @@ impl IcmpJob {
         &self,
         client: &Client,
         request: PerformIcmpBody,
-    ) -> eyre::Result<ResponseValue<PerformIcmpResponse>> {
+    ) -> Result<ResponseValue<PerformIcmpResponse>, Errors> {
         let retry_strategy = ExponentialBackoff::from_millis(100)
             .factor(2)
-            .max_delay(Duration::from_secs(60))
+            .max_delay(Duration::from_millis(200))
             .take(3);
 
         info!("Executing request with retry strategy");
         Retry::spawn(retry_strategy, || async {
-            client
-                .perform_icmp(&request)
-                .await
-                .context("Failed to send job")
+            client.perform_icmp(&request).await.map_err(|e| e.into())
         })
         .await
     }
@@ -126,8 +125,11 @@ impl JobScheduler {
                 async move {
                     match job.execute(&client).await {
                         Ok(v) => progress.display_job(v).await,
+                        Err(Errors::UnauthorizedError) => {
+                            error!("{}", Errors::UnauthorizedError);
+                        }
                         Err(e) => {
-                            error!("Job failed: {}", e);
+                            error!(?e, "Job failed");
                         }
                     };
                 }
